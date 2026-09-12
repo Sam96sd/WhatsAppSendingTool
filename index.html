@@ -51,6 +51,24 @@ select.pill{padding-inline:9px}
 .btn:hover{background:var(--surface-2)}
 .btn:disabled{opacity:.45; cursor:not-allowed}
 
+/* ---------- خطوات البداية ---------- */
+.stepcard{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px; margin-top:14px}
+.stepnum{font-family:var(--f-display); font-size:13px; letter-spacing:.05em; color:var(--accent); margin-bottom:3px}
+.stepttl{font-size:15px; color:var(--muted); margin-bottom:14px}
+.stepcard.locked{opacity:.42; pointer-events:none; filter:grayscale(.35)}
+.stepcard.locked .lockmsg{display:block}
+.lockmsg{display:none; font-size:13px; color:var(--muted); margin-top:10px; text-align:center}
+.devices{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.dev{display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; cursor:pointer;
+  background:var(--surface-2); border:2px solid var(--line); border-radius:13px; padding:16px 10px; font-weight:600; font-size:15px}
+.dev:hover{border-color:var(--accent)}
+.dev svg{width:26px; height:26px; fill:var(--muted)}
+.dev small{font-weight:400; font-size:11.5px; color:var(--muted); line-height:1.45}
+.dev[aria-pressed="true"]{border-color:var(--accent); background:var(--accent); color:var(--on-accent)}
+.dev[aria-pressed="true"] svg{fill:currentColor}
+.dev[aria-pressed="true"] small{color:currentColor; opacity:.85}
+@media (max-width:480px){ .devices{grid-template-columns:1fr} .dev{flex-direction:row; justify-content:flex-start; text-align:right; padding:13px 14px} .dev div{display:flex; flex-direction:column} }
+
 /* ---------- شاشة الرفع ---------- */
 .hero{padding-block:26px 0}
 .hero h1{font-family:var(--f-display); font-size:26px; margin:0 0 8px; text-wrap:balance}
@@ -143,10 +161,10 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
     <div class="brand"><span class="dot"></span>مِرسال فاكتيف</div>
     <span class="pill" id="fileChip" hidden></span>
     <select class="pill" id="sheetSel" title="الورقة" hidden></select>
-    <select class="pill" id="modeSel" title="طريقة الفتح">
-      <option value="wb">واتساب بزنس (أندرويد)</option>
-      <option value="app">تطبيق واتساب</option>
-      <option value="web">واتساب ويب (كمبيوتر)</option>
+    <select class="pill" id="modeSel" title="الجهاز" hidden>
+      <option value="wb">أندرويد — واتساب بزنس</option>
+      <option value="app">آيفون — تطبيق واتساب</option>
+      <option value="web">كمبيوتر — واتساب ويب</option>
     </select>
     <button class="btn" id="newFile" hidden>ملف آخر</button>
   </div>
@@ -157,20 +175,44 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
     <h1>ارفع ملف اليوم وابدأ الإرسال</h1>
     <p>الأداة تقرأ ملف الإكسيل، تعرّب الأسماء الإنجليزية داخل الرسائل، وتفتح لك محادثة كل مشترك والرسالة مكتوبة جاهزة — تضغط إرسال فقط.</p>
 
-    <div class="drop" id="drop">
-      <div class="big">اسحب الملف هنا</div>
-      <div class="sub">‏Excel (xlsx) أو CSV — أي اسم، أي عدد أوراق</div>
-      <button class="pick" id="pickBtn">
-        <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M12 3l5 5h-3v6h-4V8H7l5-5Zm-7 15h14v2H5v-2Z"/></svg>
-        اختر ملف الإكسيل
-      </button>
-      <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.xls" hidden>
-    </div>
+    <section class="stepcard" id="stepDevice">
+      <div class="stepnum">الخطوة ١</div>
+      <div class="stepttl">من أي جهاز سترسل؟ هذا يحدّد كيف تُفتح المحادثة.</div>
+      <div class="devices" id="devices">
+        <button type="button" class="dev" data-mode="wb" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M7 1h10a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Zm0 4v14h10V5H7Zm4 15h2v1h-2v-1Z"/></svg>
+          <div>أندرويد<small>يفتح تطبيق واتساب بزنس</small></div>
+        </button>
+        <button type="button" class="dev" data-mode="app" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M8 1h8a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3Zm2 2v1h4V3h-4ZM7 6v12h10V6H7Zm3 14v1h4v-1h-4Z"/></svg>
+          <div>آيفون<small>يفتح تطبيق واتساب</small></div>
+        </button>
+        <button type="button" class="dev" data-mode="web" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M3 4h18a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v9h16V6H4ZM1 19h22v2H1v-2Z"/></svg>
+          <div>كمبيوتر<small>يفتح واتساب ويب</small></div>
+        </button>
+      </div>
+    </section>
+
+    <section class="stepcard locked" id="stepFile">
+      <div class="stepnum">الخطوة ٢</div>
+      <div class="stepttl">ارفع ملف اليوم.</div>
+      <div class="drop" id="drop">
+        <div class="big">اسحب الملف هنا</div>
+        <div class="sub">‏Excel (xlsx) أو CSV — أي اسم، أي عدد أوراق</div>
+        <button class="pick" id="pickBtn">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M12 3l5 5h-3v6h-4V8H7l5-5Zm-7 15h14v2H5v-2Z"/></svg>
+          اختر ملف الإكسيل
+        </button>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.xls" hidden>
+      </div>
+      <div class="lockmsg">اختر جهازك في الخطوة ١ أولًا</div>
+    </section>
 
     <div class="steps">
-      <div class="step"><b>١ — الملف</b><span>أعمدة الاسم والرقم والرسالة الجاهزة تُكتشف تلقائيًا من صف العناوين.</span></div>
-      <div class="step"><b>٢ — الأسماء</b><span>Ali يصير علي داخل الرسالة، وتقدر تعدّل الاسم قبل الإرسال.</span></div>
-      <div class="step"><b>٣ — الإرسال</b><span>زر واحد يفتح المحادثة والرسالة جاهزة، ثم التالي مباشرة.</span></div>
+      <div class="step"><b>الملف</b><span>أعمدة الاسم والرقم والرسالة الجاهزة تُكتشف تلقائيًا من صف العناوين.</span></div>
+      <div class="step"><b>الأسماء</b><span>Ali يصير علي داخل الرسالة، وتقدر تعدّل الاسم قبل الإرسال.</span></div>
+      <div class="step"><b>الإرسال</b><span>زر واحد يفتح المحادثة والرسالة جاهزة، ثم التالي مباشرة.</span></div>
     </div>
 
     <p class="privacy">
@@ -331,13 +373,15 @@ function buildMessage(message, name){
 }
 
 /* ====================== روابط واتساب ====================== */
-function detectMode(){
-  const ua = navigator.userAgent;
-  if(/Android/i.test(ua)) return "wb";
-  if(/iPhone|iPad|iPod/i.test(ua)) return "app";
-  return "web";
+function mode(){ try { return localStorage.getItem("fs:mode") || ""; } catch(e){ return ""; } }
+function setMode(m){
+  try { localStorage.setItem("fs:mode", m); } catch(e){}
+  document.querySelectorAll("#devices .dev").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  $("#stepFile").classList.remove("locked");
+  const sel = $("#modeSel"); sel.value = m; sel.hidden = false;
+  if(m === "app") toast("على آيفون: إن كان عندك واتساب العادي والبزنس، النظام يفتح الافتراضي عنده");
+  if(ROWS.length) render();
 }
-function mode(){ try { return localStorage.getItem("fs:mode") || detectMode(); } catch(e){ return detectMode(); } }
 function waLink(phone, text){
   const t = encodeURIComponent(text || "");
   if(mode() === "web") return `https://web.whatsapp.com/send?phone=${phone}&text=${t}&type=phone_number&app_absent=0`;
@@ -358,6 +402,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 /* ====================== تحميل الملف ====================== */
 async function handleFile(file){
   if(!file) return;
+  if(!mode()){ toast("اختر جهازك أولًا"); return; }
   try{
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type:"array", cellDates:false });
@@ -513,10 +558,11 @@ const drop = $("#drop");
 ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => handleFile(e.dataTransfer.files[0]));
 $("#sheetSel").addEventListener("change", e => selectSheet(e.target.value));
-$("#modeSel").addEventListener("change", e => {
-  try { localStorage.setItem("fs:mode", e.target.value); } catch(err){}
-  if(e.target.value === "app") toast("على آيفون: إن كان عندك واتساب العادي والبزنس، النظام يفتح الافتراضي عنده");
-  if(ROWS.length) render();
+$("#modeSel").addEventListener("change", e => setMode(e.target.value));
+$("#devices").addEventListener("click", e => {
+  const b = e.target.closest(".dev"); if(!b) return;
+  setMode(b.dataset.mode);
+  $("#stepFile").scrollIntoView({ behavior:"smooth", block:"nearest" });
 });
 $("#copyStatus").addEventListener("click", () => {
   const txt = ROWS.map(r => STATE[r.phone]==="sent" ? "تم الإرسال" : STATE[r.phone]==="skipped" ? "تخطّي" : "").join("\n");
@@ -531,7 +577,7 @@ document.addEventListener("keydown", e => {
 });
 
 /* ====================== الإقلاع ====================== */
-$("#modeSel").value = mode();
+if(mode()) setMode(mode());
 fetch("names_ar.json").then(r => r.ok ? r.json() : {}).then(j => {
   NAMES = {};
   for(const k in j) if(!k.startsWith("_")) NAMES[k.toLowerCase()] = j[k];
