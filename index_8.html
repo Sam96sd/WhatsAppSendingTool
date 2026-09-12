@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f7a4a">
+<title>مِرسال فاكتيف</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f2f5f2; --surface:#ffffff; --surface-2:#eaf0eb; --line:#d5e0d8;
+  --ink:#12211b; --muted:#5c6f66; --accent:#0f7a4a; --accent-hover:#0b6a40;
+  --on-accent:#ffffff; --warn:#8a5a06; --warn-bg:#fbf1de; --warn-line:#e8d3a8;
+  --done:#0f7a4a; --skip:#8a8f8c;
+  --f-body:"Noto Sans Arabic","Segoe UI","Segoe UI Arabic",system-ui,Tahoma,Arial,sans-serif;
+  --f-display:"Noto Sans Arabic","Segoe UI","Segoe UI Arabic",system-ui,Tahoma,Arial,sans-serif;
+  --f-mono:ui-monospace,"Segoe UI Mono",Consolas,"SF Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1411; --surface:#151e1a; --surface-2:#1d2823; --line:#2b3b34;
+    --ink:#e6eee9; --muted:#90a59b; --accent:#2fa96e; --accent-hover:#3cbb7d;
+    --on-accent:#04140c; --warn:#e6b263; --warn-bg:#2a2216; --warn-line:#453720;
+    --done:#2fa96e; --skip:#7b8884;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1411; --surface:#151e1a; --surface-2:#1d2823; --line:#2b3b34;
+  --ink:#e6eee9; --muted:#90a59b; --accent:#2fa96e; --accent-hover:#3cbb7d;
+  --on-accent:#04140c; --warn:#e6b263; --warn-bg:#2a2216; --warn-line:#453720;
+  --done:#2fa96e; --skip:#7b8884;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6;
+  direction:rtl; -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%}
+button,input,textarea,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.wrap{max-width:820px; margin:0 auto; padding-inline:16px; padding-block:0 120px}
+
+/* ---------- الشريط العلوي ---------- */
+.top{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line)}
+.top-in{max-width:820px; margin:0 auto; padding:10px 16px; display:flex; flex-wrap:wrap; gap:9px; align-items:center}
+.brand{font-family:var(--f-display); font-size:19px; font-weight:600; display:flex; align-items:center; gap:8px; margin-inline-end:auto}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.pill{background:var(--surface-2); border:1px solid var(--line); border-radius:99px; padding:5px 11px; font-size:12.5px; color:var(--muted); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+select.pill{padding-inline:9px}
+.btn{background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:8px 13px; font-size:14px; cursor:pointer}
+.btn:hover{background:var(--surface-2)}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+/* ---------- خطوات البداية ---------- */
+.stepcard{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px; margin-top:14px}
+.stepnum{font-weight:600; font-family:var(--f-display); font-size:13px; color:var(--accent); margin-bottom:3px}
+.stepttl{font-size:15px; color:var(--muted); margin-bottom:14px}
+.stepcard.locked{opacity:.42; pointer-events:none; filter:grayscale(.35)}
+.stepcard.locked .lockmsg{display:block}
+.lockmsg{display:none; font-size:13px; color:var(--muted); margin-top:10px; text-align:center}
+.devices{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.dev{display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; cursor:pointer;
+  background:var(--surface-2); border:2px solid var(--line); border-radius:13px; padding:16px 10px; font-weight:600; font-size:15px}
+.dev:hover{border-color:var(--accent)}
+.dev svg{width:26px; height:26px; fill:var(--muted)}
+.dev div{display:flex; flex-direction:column; align-items:center; gap:3px}
+.dev small{display:block; font-weight:400; font-size:11.5px; color:var(--muted); line-height:1.45}
+.dev[aria-pressed="true"]{border-color:var(--accent); background:var(--accent); color:var(--on-accent)}
+.dev[aria-pressed="true"] svg{fill:currentColor}
+.dev[aria-pressed="true"] small{color:currentColor; opacity:.85}
+@media (max-width:480px){ .devices{grid-template-columns:1fr} .dev{flex-direction:row; justify-content:flex-start; text-align:right; padding:13px 14px} .dev div{align-items:flex-start} }
+
+/* ---------- شاشة الرفع ---------- */
+.hero{padding-block:26px 0}
+.hero h1{font-family:var(--f-display); font-size:26px; margin:0 0 8px; text-wrap:balance}
+.hero p{color:var(--muted); margin:0 0 20px; max-width:56ch}
+.drop{border:2px dashed var(--line); background:var(--surface); border-radius:16px; padding:34px 20px; text-align:center; transition:border-color .15s, background .15s}
+.drop.over{border-color:var(--accent); background:var(--surface-2)}
+.drop .big{font-weight:600; font-family:var(--f-display); font-size:19px; margin-bottom:6px}
+.drop .sub{color:var(--muted); font-size:13.5px; margin-bottom:18px}
+.pick{display:inline-flex; align-items:center; gap:9px; background:var(--accent); color:var(--on-accent); border:none;
+  font-weight:700; font-size:16px; padding:14px 26px; border-radius:11px; cursor:pointer}
+.pick:hover{background:var(--accent-hover)}
+.steps{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-top:22px}
+.step{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px}
+.step b{font-weight:600; display:block; font-family:var(--f-display); font-size:13px; color:var(--accent); margin-bottom:4px}
+.step span{font-size:13.5px; color:var(--muted)}
+.privacy{margin-top:18px; font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start}
+.privacy svg{width:16px;height:16px;fill:var(--done);flex:none;margin-top:3px}
+
+/* ---------- التقدم ---------- */
+.progress{display:flex; align-items:center; gap:12px; padding:14px 0 4px}
+.bar{flex:1; height:8px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden}
+.bar span{display:block; height:100%; width:0; background:var(--accent); transition:width .25s}
+.count{font-family:var(--f-mono); font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
+.count b{color:var(--ink); font-size:16px}
+
+/* ---------- البطاقة ---------- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:17px; margin-top:10px}
+.card.is-done{border-style:dashed}
+.card-head{display:flex; flex-wrap:wrap; gap:9px 12px; align-items:flex-start; padding-bottom:12px; border-bottom:1px solid var(--line)}
+.who{display:flex; flex-direction:column; gap:5px; margin-inline-end:auto; min-width:190px; max-width:330px}
+.lbl{font-weight:600; font-family:var(--f-display); font-size:11.5px; color:var(--muted)}
+.name-in{background:transparent; border:none; border-bottom:2px dashed var(--line); font-size:24px; font-weight:700; padding:2px 2px 4px; width:100%}
+.name-in:focus{border-bottom-color:var(--accent); outline:none}
+.phone{font-family:var(--f-mono); font-size:14px; color:var(--muted); direction:ltr; text-align:right}
+.chips{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.chip{font-size:12px; padding:3px 9px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); color:var(--muted)}
+.chip.pkg{color:var(--ink); font-weight:600}
+.chip.sent{color:var(--done); border-color:currentColor; font-weight:600}
+.note{display:flex; gap:8px; align-items:flex-start; background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn);
+  border-radius:9px; padding:9px 11px; font-size:13px; margin-top:11px}
+.note::before{content:"!"; font-weight:700; width:17px; height:17px; flex:none; border-radius:50%; border:1.5px solid currentColor;
+  display:grid; place-items:center; font-size:11px; margin-top:2px}
+.msg-label{display:flex; justify-content:space-between; align-items:baseline; margin:14px 0 6px}
+.msg-label span{font-weight:600; font-family:var(--f-display); font-size:11.5px; color:var(--muted)}
+.msg-label em{font-style:normal; font-size:12px; color:var(--muted); font-family:var(--f-mono)}
+textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--surface-2); border:1px solid var(--line);
+  border-radius:10px; padding:13px; font-size:15px; line-height:1.8}
+.actions{display:flex; flex-wrap:wrap; gap:9px; margin-top:14px; align-items:center}
+.send{display:inline-flex; align-items:center; justify-content:center; gap:9px; background:var(--accent); color:var(--on-accent);
+  text-decoration:none; font-weight:700; font-size:16px; padding:14px 22px; border-radius:11px; flex:1 1 240px}
+.send:hover{background:var(--accent-hover)}
+.send svg{width:19px;height:19px;fill:currentColor}
+.hint{font-size:12.5px; color:var(--muted); flex-basis:100%}
+
+/* ---------- القائمة ---------- */
+.sec{font-weight:600; font-family:var(--f-display); font-size:12.5px; color:var(--muted); margin:24px 0 8px; display:flex; gap:10px; align-items:center}
+.sec::after{content:""; flex:1; height:1px; background:var(--line)}
+.list{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+.row{display:grid; grid-template-columns:24px 1fr auto; gap:10px; align-items:center; background:var(--surface);
+  padding:11px 13px; cursor:pointer; text-align:right; border:none; width:100%}
+.row:hover{background:var(--surface-2)}
+.row.active{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--accent)}
+.row .n{font-family:var(--f-mono); font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+.row .nm{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.row .nm small{display:block; font-weight:400; font-size:11.5px; color:var(--muted); font-family:var(--f-mono); direction:ltr; text-align:right}
+.state{font-size:11.5px; padding:2px 9px; border-radius:99px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+.state.sent{color:var(--done); border-color:currentColor; font-weight:600}
+.row.done .nm{color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px}
+.alldone{background:var(--surface-2); border:1px solid var(--line); border-inline-start:3px solid var(--done);
+  border-radius:10px; padding:11px 13px; font-size:14px; margin-top:11px}
+.foot{display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin-top:18px; font-size:12.5px; color:var(--muted)}
+.foot .grow{flex-basis:100%}
+.toast{position:fixed; inset-block-end:calc(16px + env(safe-area-inset-bottom)); inset-inline-start:16px; background:var(--ink); color:var(--bg);
+  padding:10px 15px; border-radius:9px; font-size:14px; opacity:0; transform:translateY(8px); transition:.2s; pointer-events:none; z-index:60}
+.toast.show{opacity:1; transform:none}
+@media (max-width:520px){
+  .name-in{font-size:21px}
+  .card{padding:14px}
+  .send{flex:1 1 100%}
+  .row{grid-template-columns:1fr auto}
+  .row .n{display:none}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="dot"></span>مِرسال فاكتيف</div>
+    <span class="pill" id="fileChip" hidden></span>
+    <select class="pill" id="sheetSel" title="الورقة" hidden></select>
+    <select class="pill" id="modeSel" title="الجهاز" hidden>
+      <option value="wb">أندرويد — واتساب بزنس</option>
+      <option value="app">آيفون — تطبيق واتساب</option>
+      <option value="web">كمبيوتر — واتساب ويب</option>
+    </select>
+    <button class="btn" id="newFile" hidden>ملف آخر</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section id="hero" class="hero">
+    <h1>ارفع ملف اليوم وابدأ الإرسال</h1>
+    <p>الأداة تقرأ ملف الإكسيل، تعرّب الأسماء الإنجليزية داخل الرسائل، وتفتح لك محادثة كل مشترك والرسالة مكتوبة جاهزة — تضغط إرسال فقط.</p>
+
+    <section class="stepcard" id="stepDevice">
+      <div class="stepnum">الخطوة ١</div>
+      <div class="stepttl">من أي جهاز سترسل؟ هذا يحدّد كيف تُفتح المحادثة.</div>
+      <div class="devices" id="devices">
+        <button type="button" class="dev" data-mode="wb" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M7 1h10a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Zm0 4v14h10V5H7Zm4 15h2v1h-2v-1Z"/></svg>
+          <div>أندرويد<small>يفتح تطبيق واتساب بزنس</small></div>
+        </button>
+        <button type="button" class="dev" data-mode="app" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M8 1h8a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3Zm2 2v1h4V3h-4ZM7 6v12h10V6H7Zm3 14v1h4v-1h-4Z"/></svg>
+          <div>آيفون<small>يفتح تطبيق واتساب</small></div>
+        </button>
+        <button type="button" class="dev" data-mode="web" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M3 4h18a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v9h16V6H4ZM1 19h22v2H1v-2Z"/></svg>
+          <div>كمبيوتر<small>يفتح واتساب ويب</small></div>
+        </button>
+      </div>
+    </section>
+
+    <section class="stepcard locked" id="stepFile">
+      <div class="stepnum">الخطوة ٢</div>
+      <div class="stepttl">ارفع ملف اليوم.</div>
+      <div class="drop" id="drop">
+        <div class="big">اسحب الملف هنا</div>
+        <div class="sub">‏Excel (xlsx) أو CSV — أي اسم، أي عدد أوراق</div>
+        <button class="pick" id="pickBtn">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M12 3l5 5h-3v6h-4V8H7l5-5Zm-7 15h14v2H5v-2Z"/></svg>
+          اختر ملف الإكسيل
+        </button>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.xls" hidden>
+      </div>
+      <div class="lockmsg">اختر جهازك في الخطوة ١ أولًا</div>
+    </section>
+
+    <div class="steps">
+      <div class="step"><b>الملف</b><span>أعمدة الاسم والرقم والرسالة الجاهزة تُكتشف تلقائيًا من صف العناوين.</span></div>
+      <div class="step"><b>الأسماء</b><span>Ali يصير علي داخل الرسالة، وتقدر تعدّل الاسم قبل الإرسال.</span></div>
+      <div class="step"><b>الإرسال</b><span>زر واحد يفتح المحادثة والرسالة جاهزة، ثم التالي مباشرة.</span></div>
+    </div>
+
+    <p class="privacy">
+      <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 10.9h7c-.5 3.9-3.1 7.4-7 8.5V12H5V6.3l7-3.1v8.7Z"/></svg>
+      الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم — لا أرقام ولا أسماء تغادر جهازك.
+    </p>
+    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٤</p>
+  </section>
+
+  <div id="app" hidden>
+    <div class="progress">
+      <div class="count"><b id="cDone">0</b> من <span id="cAll">0</span> — أُرسلت</div>
+      <div class="bar"><span id="barFill"></span></div>
+      <div class="count" id="cLeft">متبقٍ 0</div>
+    </div>
+    <div id="stage"></div>
+    <div class="sec">القائمة</div>
+    <div class="list" id="list"></div>
+    <div class="foot">
+      <button class="btn" id="copyStatus">نسخ عمود الحالة للإكسيل</button>
+      <button class="btn" id="resetAll">تصفير الحالة</button>
+      <span class="grow" id="footNote"></span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="xlsx.full.min.js"></script>
+<script>
+/* ============================ الحالة ============================ */
+const $ = s => document.querySelector(s);
+let SHEETS = {}, FILE = "", SHEET = "", ROWS = [], STATE = {}, CUR = 0, LAST = null, NAMES = {};
+
+const DIAL = { "الكويت":"965", "قطر":"974", "الامارات":"971", "الإمارات":"971",
+  "السعودية":"966", "البحرين":"973", "عمان":"968", "عُمان":"968",
+  "kuwait":"965", "qatar":"974", "uae":"971", "ksa":"966", "saudi":"966", "bahrain":"973", "oman":"968" };
+
+/* ====================== تعريب الأسماء ====================== */
+const NAMES_FALLBACK = {
+  mohamed:"محمد",mohammed:"محمد",mohammad:"محمد",muhammad:"محمد",ahmad:"أحمد",ahmed:"أحمد",ali:"علي",
+  abdullah:"عبدالله",abdulla:"عبدالله",abdulaziz:"عبدالعزيز",abdulrahman:"عبدالرحمن",bader:"بدر",badr:"بدر",
+  muath:"معاذ",saud:"سعود",salem:"سالم",saleh:"صالح",fahad:"فهد",fahd:"فهد",faisal:"فيصل",khaled:"خالد",
+  khalid:"خالد",nasser:"ناصر",yousef:"يوسف",yusuf:"يوسف",ibrahim:"إبراهيم",omar:"عمر",hamad:"حمد",
+  hussain:"حسين",hassan:"حسن",jassim:"جاسم",talal:"طلال",turki:"تركي",waleed:"وليد",zaid:"زيد",
+  mishari:"مشاري",meshal:"مشعل",nawaf:"نواف",sultan:"سلطان",yazeed:"يزيد",sara:"سارة",sarah:"سارة",
+  noura:"نورة",fatima:"فاطمة",maryam:"مريم",aisha:"عائشة",dana:"دانة",reem:"ريم",shahad:"شهد",salma:"سلمى"
+};
+const DIGRAPHS = [["sch","ش"],["tch","تش"],["sh","ش"],["ch","تش"],["th","ث"],["kh","خ"],["gh","غ"],["dh","ذ"],
+  ["ph","ف"],["ck","ك"],["qu","كو"],["oo","و"],["ou","و"],["ee","ي"],["ea","ي"],["ai","اي"],["ay","اي"],
+  ["ei","ي"],["ie","ي"],["au","او"],["aw","او"],["ow","او"],["oa","و"],["ui","وي"]];
+const SINGLES = {a:"ا",b:"ب",c:"ك",d:"د",e:"",f:"ف",g:"ج",h:"ه",i:"ي",j:"ج",k:"ك",l:"ل",m:"م",n:"ن",
+  o:"و",p:"ب",q:"ق",r:"ر",s:"س",t:"ت",u:"و",v:"ف",w:"و",x:"كس",y:"ي",z:"ز"};
+
+/* مكتبة قراءة الإكسيل تقرأ الإيموجي منقوصًا (U+1F44B تصير U+F44B) — نعيدها لأصلها */
+function fixEmoji(str){
+  if(!str) return str;
+  let out = "", changed = false;
+  for(const ch of str){
+    const c = ch.codePointAt(0);
+    if(c >= 0xF000 && c <= 0xFAFF){ out += String.fromCodePoint(c + 0x10000); changed = true; }
+    else out += ch;
+  }
+  return changed ? out : str;
+}
+
+function collapse(w){ let o=""; for(const ch of w){ if(o && o[o.length-1]===ch && !"aeiou".includes(ch)) continue; o+=ch; } return o; }
+function translit(word){
+  const w = collapse(word.toLowerCase().replace(/[^a-z]/g,""));
+  if(!w) return word;
+  let out="", i=0;
+  while(i < w.length){
+    const d = DIGRAPHS.find(([k]) => w.startsWith(k, i));
+    if(d){ out += d[1]; i += d[0].length; }
+    else { out += (SINGLES[w[i]] ?? ""); i++; }
+  }
+  if(!out) return word;
+  if("eiou".includes(w[0]) && "وي".includes(out[0])) out = ("ei".includes(w[0]) ? "إ" : "أ") + out.slice(1);
+  return out;
+}
+function arabize(word){
+  const key = word.toLowerCase().replace(/[^a-z]/g,"");
+  if(NAMES[key]) return [NAMES[key], "dict"];
+  if(key.startsWith("al") && NAMES[key.slice(2)]) return ["ال"+NAMES[key.slice(2)], "dict"];
+  return [translit(word), "rules"];
+}
+
+/* ====================== قراءة الملف ====================== */
+const AR_DIGITS = {"٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
+  "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9"};
+const toEn = s => String(s ?? "").replace(/[٠-٩۰-۹]/g, d => AR_DIGITS[d]);
+const norm = s => String(s ?? "").normalize("NFKC").trim().replace(/[ً-ْـ]/g,"");
+const LATIN = /[A-Za-z][A-Za-z'’\-\.]*/g;
+
+function findHeader(rows){
+  for(let i=0; i<Math.min(rows.length,12); i++){
+    if(rows[i].filter(c => String(c).trim()).length >= 3) return i;
+  }
+  return 0;
+}
+function detectColumns(header, body){
+  const heads = header.map(norm);
+  const byWord = (...ws) => { for(let i=0;i<heads.length;i++) for(const w of ws) if(heads[i].includes(w)) return i; return null; };
+  const idx = {
+    link: byWord("رابط","link","wa.me"),
+    phone: byWord("رقم","جوال","موبايل","phone","mobile","number"),
+    name: byWord("اسم","name"),
+    message: byWord("رسالة","message","نص"),
+    country: byWord("دولة","country"),
+    package: byWord("باقة","package","اشتراك"),
+    source: byWord("مصدر","source")
+  };
+  const ncols = Math.max(header.length, ...body.map(r => r.length), 1);
+  const vals = i => body.slice(0,40).map(r => String(r[i] ?? "").trim()).filter(Boolean);
+  if(idx.link === null)
+    for(let i=0;i<ncols;i++){ const v=vals(i); if(v.length && v.filter(x=>/wa\.me|whatsapp/i.test(x)).length >= v.length/2){ idx.link=i; break; } }
+  if(idx.phone === null)
+    for(let i=0;i<ncols;i++){ if(i===idx.link) continue; const v=vals(i);
+      if(v.length && v.filter(x => toEn(x).replace(/\D/g,"").length >= 8).length >= v.length/2){ idx.phone=i; break; } }
+  if(idx.message === null){
+    let best=null, bl=40;
+    for(let i=0;i<ncols;i++){ const v=vals(i); if(!v.length) continue;
+      const avg = v.reduce((a,b)=>a+b.length,0)/v.length; if(avg>bl){ best=i; bl=avg; } }
+    idx.message = best;
+  }
+  if(idx.name === null)
+    for(let i=0;i<ncols;i++) if(![idx.link,idx.phone,idx.message].includes(i)){ idx.name=i; break; }
+  return idx;
+}
+function cleanPhone(rawPhone, rawLink, country){
+  let d = "";
+  if(rawLink){ const m = toEn(rawLink).match(/(?:wa\.me\/|phone=)(\+?\d[\d\s\-]*)/); if(m) d = m[1].replace(/\D/g,""); }
+  if(!d && rawPhone) d = toEn(rawPhone).replace(/\D/g,"");
+  if(!d) return "";
+  d = d.replace(/^00/,"");
+  const c = norm(country).toLowerCase();
+  let code = "";
+  for(const k in DIAL){ if(k && c.includes(k.toLowerCase())){ code = DIAL[k]; break; } }
+  if(code && !d.startsWith(code)){
+    if(d.startsWith("0")) d = code + d.replace(/^0+/,"");
+    else if(d.length <= 9) d = code + d;
+  } else if(!code && d.startsWith("0") && d.length > 9) d = d.replace(/^0+/,"");
+  return (d.length >= 8 && d.length <= 15) ? d : "";
+}
+function buildMessage(message, name){
+  const flags = [];
+  let display = (name || "").trim(), quality = "ar";
+  if(!message) return { message:"", display, quality, flags:["لا توجد رسالة جاهزة في هذا الصف"] };
+  const toks = (name || "").match(LATIN)?.filter(t => t.replace(/[^A-Za-z]/g,"").length >= 2) || [];
+  if(toks.length){
+    const [firstAr, src] = arabize(toks[0]);
+    display = firstAr; quality = src;
+    let replaced = false;
+    for(const tok of [...toks].sort((a,b)=>b.length-a.length)){
+      const [ar] = arabize(tok);
+      const re = new RegExp("(?<![A-Za-z])" + tok.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + "(?![A-Za-z])", "gi");
+      if(re.test(message)){ message = message.replace(re, ar); replaced = true; }
+    }
+    if(!replaced){
+      const m = message.match(/(اخوي|أخوي|اخي|أخي|اختي|أختي|الغالي|الغالية)\s+([A-Za-z][A-Za-z'’\-\.]*)/);
+      if(m){ const [ar] = arabize(m[2]); message = message.replace(m[2], ar); replaced = true; }
+    }
+    if(!replaced && firstAr && !message.includes(firstAr)) flags.push("الاسم غير مكتوب داخل الرسالة — تأكد قبل الإرسال");
+    if(src === "rules") flags.push("تعريب تقريبي — راجع الاسم");
+  } else {
+    display = (name || "").split(/\s+/)[0] || "";
+  }
+  const left = (message.match(LATIN) || []).filter(t => t.length >= 2 && !/^(https?|wa|me|com|app|factive|vip|vvip|org|ad|sc)$/i.test(t));
+  if(left.length) flags.push("ما زال في الرسالة كلمات إنجليزية: " + [...new Set(left)].slice(0,4).join("، "));
+  return { message, display, quality, flags };
+}
+
+/* ====================== روابط واتساب ====================== */
+function mode(){ try { return localStorage.getItem("fs:mode") || ""; } catch(e){ return ""; } }
+function setMode(m){
+  try { localStorage.setItem("fs:mode", m); } catch(e){}
+  document.querySelectorAll("#devices .dev").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  $("#stepFile").classList.remove("locked");
+  const sel = $("#modeSel"); sel.value = m; sel.hidden = false;
+  if(m === "app") toast("على آيفون: إن كان عندك واتساب العادي والبزنس، النظام يفتح الافتراضي عنده");
+  if(ROWS.length) render();
+}
+function waLink(phone, text){
+  const t = encodeURIComponent(text || "");
+  if(mode() === "web") return `https://web.whatsapp.com/send?phone=${phone}&text=${t}&type=phone_number&app_absent=0`;
+  if(mode() === "wb"){
+    const fb = encodeURIComponent(`https://wa.me/${phone}?text=${t}`);
+    return `intent://send?phone=${phone}&text=${t}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${fb};end`;
+  }
+  return `whatsapp://send?phone=${phone}&text=${t}`;
+}
+
+/* ====================== التخزين ====================== */
+const key = () => "fs:" + FILE + "|" + SHEET;
+function loadState(){ try { STATE = JSON.parse(localStorage.getItem(key()) || "{}"); } catch(e){ STATE = {}; } }
+function saveState(){ try { localStorage.setItem(key(), JSON.stringify(STATE)); } catch(e){} }
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),2000); }
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ====================== تحميل الملف ====================== */
+async function handleFile(file){
+  if(!file) return;
+  if(!mode()){ toast("اختر جهازك أولًا"); return; }
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:"array", cellDates:false });
+    SHEETS = {};
+    wb.SheetNames.forEach(n => {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:"", blankrows:false, raw:false });
+      if(rows.some(r => r.some(c => String(c).trim()))) SHEETS[n] = rows.map(r => r.map(c => fixEmoji(String(c ?? "").trim())));
+    });
+    const names = Object.keys(SHEETS);
+    if(!names.length){ toast("الملف لا يحتوي على بيانات"); return; }
+    FILE = file.name;
+    $("#fileChip").textContent = FILE; $("#fileChip").hidden = false;
+    $("#sheetSel").innerHTML = names.map(n => `<option>${esc(n)}</option>`).join("");
+    $("#sheetSel").hidden = names.length < 2;
+    $("#newFile").hidden = false;
+    $("#hero").hidden = true; $("#app").hidden = false;
+    selectSheet(names[0]);
+  }catch(err){
+    toast("تعذّرت قراءة الملف — تأكد أنه xlsx أو csv");
+    console.error(err);
+  }
+}
+function selectSheet(name){
+  SHEET = name;
+  const rows = SHEETS[name];
+  const hi = findHeader(rows), header = rows[hi], body = rows.slice(hi+1);
+  const idx = detectColumns(header, body);
+  const cell = (r,k) => (idx[k] == null || idx[k] >= r.length) ? "" : String(r[idx[k]] ?? "").trim();
+  ROWS = []; let skipped = 0;
+  body.forEach((r, n) => {
+    if(!r.some(c => String(c).trim())) return;
+    const country = cell(r,"country");
+    const phone = cleanPhone(cell(r,"phone"), cell(r,"link"), country);
+    if(!phone){ skipped++; return; }
+    const b = buildMessage(cell(r,"message"), cell(r,"name"));
+    ROWS.push({ excelRow: hi+2+n, nameRaw: cell(r,"name"), name: b.display, quality: b.quality,
+      phone, country, package: cell(r,"package"), source: cell(r,"source"), message: b.message, flags: b.flags });
+  });
+  loadState();
+  CUR = Math.max(0, ROWS.findIndex(r => !STATE[r.phone]));
+  const cols = k => idx[k] != null && header[idx[k]] ? header[idx[k]] : "؟";
+  $("#footNote").textContent =
+    (skipped ? `تجاهلت ${skipped} صفًا بلا رقم صالح — ` : "") +
+    `الأعمدة: الاسم «${cols("name")}» · الرقم «${idx.phone != null ? cols("phone") : cols("link")}» · الرسالة «${cols("message")}»`;
+  render();
+}
+
+/* ====================== العرض ====================== */
+function render(){ renderCard(); renderList(); updateProgress(); }
+
+function renderCard(){
+  if(!ROWS.length){
+    $("#stage").innerHTML = `<div class="card"><b>لا توجد صفوف صالحة في هذه الورقة.</b><br><span style="color:var(--muted)">غيّر الورقة من الأعلى، أو تأكد أن فيها عمود رقم أو رابط واتساب.</span></div>`;
+    return;
+  }
+  if(CUR < 0 || CUR >= ROWS.length) CUR = 0;
+  const r = ROWS[CUR], st = STATE[r.phone];
+  const allDone = ROWS.every(x => STATE[x.phone]);
+  const warn = [...(r.flags || [])];
+
+  $("#stage").innerHTML = `
+  ${allDone ? `<div class="alldone">خلصت القائمة ✓ — أُرسلت ${ROWS.filter(x=>STATE[x.phone]==="sent").length} رسالة.</div>` : ""}
+  <section class="card${st ? " is-done" : ""}">
+    <div class="card-head">
+      <div class="who">
+        <label class="lbl" for="nameIn">الاسم في الرسالة</label>
+        <input class="name-in" id="nameIn" value="${esc(r.name)}" spellcheck="false">
+        <div class="phone">+${r.phone}</div>
+      </div>
+      <div class="chips">
+        ${r.package ? `<span class="chip pkg">${esc(r.package)}</span>` : ""}
+        ${r.country ? `<span class="chip">${esc(r.country)}</span>` : ""}
+        ${r.source ? `<span class="chip">${esc(r.source)}</span>` : ""}
+        <span class="chip">صف ${r.excelRow}</span>
+        ${st ? `<span class="chip sent">${st === "sent" ? "أُرسلت" : "تخطّي"}</span>` : ""}
+      </div>
+    </div>
+    ${warn.map(w => `<div class="note">${esc(w)}</div>`).join("")}
+    <div class="msg-label"><span>الرسالة</span><em id="len"></em></div>
+    <textarea class="msg" id="msg" spellcheck="false">${esc(r.message)}</textarea>
+    <div class="actions">
+      <a class="send" id="sendBtn" target="_blank" rel="noopener" href="#">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2Zm5.5 14.1c-.2.6-1.3 1.2-1.8 1.2s-1.2.3-3.9-.9c-3.2-1.4-5.2-4.8-5.4-5s-1.3-1.7-1.3-3.3.8-2.3 1.1-2.6c.3-.3.6-.4.8-.4h.6c.2 0 .5-.1.7.5l1 2.4c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6s.7 1.3 1.6 2.1c1.1 1 2 1.3 2.3 1.4.3.1.5.1.7-.1l.9-1c.2-.2.4-.2.6-.1l2.2 1.1c.2.1.4.2.5.3s.1.6-.1 1.2Z"/></svg>
+        ${st === "sent" ? "إعادة فتح المحادثة" : "فتح واتساب والرسالة جاهزة"}
+      </a>
+      <button class="btn" id="copyMsg">نسخ الرسالة</button>
+      ${st ? `<button class="btn" id="clearBtn">إرجاعه للانتظار</button>` : `<button class="btn" id="skipBtn">تخطي</button>`}
+      <button class="btn" id="undoBtn" ${LAST ? "" : "disabled"}>تراجع</button>
+      <span class="hint">يفتح واتساب والرسالة مكتوبة في الخانة — تضغط إرسال، ثم ترجع هنا للتالي.</span>
+    </div>
+  </section>`;
+
+  const msg = $("#msg"), nameIn = $("#nameIn"), send = $("#sendBtn");
+  const relink = () => { send.href = waLink(r.phone, msg.value); $("#len").textContent = msg.value.length + " حرف"; };
+  relink();
+  msg.addEventListener("input", relink);
+  nameIn.addEventListener("input", () => {
+    const old = r.name, nu = nameIn.value;
+    if(old && nu && msg.value.includes(old)) msg.value = msg.value.replace(old, nu);
+    r.name = nu; relink();
+  });
+  send.addEventListener("click", e => {
+    if(mode() !== "web"){ e.preventDefault(); window.location.href = send.href; }  // يفتح التطبيق ويبقى الموقع مكانه
+    setTimeout(() => mark(r, "sent", msg.value), 400);
+  });
+  $("#copyMsg").addEventListener("click", () => navigator.clipboard.writeText(msg.value)
+    .then(() => toast("نُسخت الرسالة"), () => toast("تعذّر النسخ")));
+  $("#skipBtn")?.addEventListener("click", () => mark(r, "skipped", msg.value));
+  $("#clearBtn")?.addEventListener("click", () => { delete STATE[r.phone]; saveState(); render(); toast("رجع للانتظار"); });
+  $("#undoBtn").addEventListener("click", undo);
+}
+
+function mark(r, status){
+  LAST = { phone: r.phone, prev: STATE[r.phone] || null, index: CUR };
+  STATE[r.phone] = status; saveState();
+  const next = ROWS.findIndex((x,i) => i > CUR && !STATE[x.phone]);
+  CUR = next >= 0 ? next : Math.max(0, ROWS.findIndex(x => !STATE[x.phone]));
+  render();
+  toast(status === "sent" ? "تم ✓ — التالي جاهز" : "تخطّيته");
+}
+function undo(){
+  if(!LAST) return;
+  if(LAST.prev) STATE[LAST.phone] = LAST.prev; else delete STATE[LAST.phone];
+  CUR = LAST.index; LAST = null; saveState(); render();
+}
+function renderList(){
+  $("#list").innerHTML = ROWS.map((r,i) => {
+    const st = STATE[r.phone];
+    return `<button class="row ${i===CUR?"active":""} ${st?"done":""}" data-i="${i}">
+      <span class="n">${i+1}</span>
+      <span class="nm">${esc(r.name || r.nameRaw || "—")}<small>+${r.phone}</small></span>
+      <span class="state ${st||""}">${st==="sent"?"أُرسلت":st==="skipped"?"تخطّي":"بالانتظار"}</span>
+    </button>`;
+  }).join("");
+  $("#list").querySelectorAll(".row").forEach(b => b.addEventListener("click", () => {
+    CUR = +b.dataset.i; render(); window.scrollTo({ top:0, behavior:"smooth" });
+  }));
+}
+function updateProgress(){
+  const sent = ROWS.filter(r => STATE[r.phone] === "sent").length;
+  const handled = ROWS.filter(r => STATE[r.phone]).length;
+  $("#cDone").textContent = sent; $("#cAll").textContent = ROWS.length;
+  $("#cLeft").textContent = "متبقٍ " + (ROWS.length - handled);
+  $("#barFill").style.width = ROWS.length ? (handled/ROWS.length*100) + "%" : "0";
+}
+
+/* ====================== الأحداث ====================== */
+$("#pickBtn").addEventListener("click", () => $("#fileInput").click());
+$("#fileInput").addEventListener("change", e => handleFile(e.target.files[0]));
+$("#newFile").addEventListener("click", () => { $("#hero").hidden = false; $("#app").hidden = true; $("#fileInput").value = ""; });
+const drop = $("#drop");
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => handleFile(e.dataTransfer.files[0]));
+$("#sheetSel").addEventListener("change", e => selectSheet(e.target.value));
+$("#modeSel").addEventListener("change", e => setMode(e.target.value));
+$("#devices").addEventListener("click", e => {
+  const b = e.target.closest(".dev"); if(!b) return;
+  setMode(b.dataset.mode);
+  $("#stepFile").scrollIntoView({ behavior:"smooth", block:"nearest" });
+});
+$("#copyStatus").addEventListener("click", () => {
+  const txt = ROWS.map(r => STATE[r.phone]==="sent" ? "تم الإرسال" : STATE[r.phone]==="skipped" ? "تخطّي" : "").join("\n");
+  navigator.clipboard.writeText(txt).then(() => toast("انسخها في عمود الملاحظات — نفس ترتيب الصفوف"), () => toast("تعذّر النسخ"));
+});
+$("#resetAll").addEventListener("click", () => {
+  if(!confirm("تصفير حالة الإرسال لهذا الملف؟")) return;
+  STATE = {}; saveState(); CUR = 0; render(); toast("تم التصفير");
+});
+document.addEventListener("keydown", e => {
+  if((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("#sendBtn")?.click(); }
+});
+
+/* ====================== الإقلاع ====================== */
+if(mode()) setMode(mode());
+fetch("names_ar.json").then(r => r.ok ? r.json() : {}).then(j => {
+  NAMES = {};
+  for(const k in j) if(!k.startsWith("_")) NAMES[k.toLowerCase()] = j[k];
+  if(!Object.keys(NAMES).length) NAMES = NAMES_FALLBACK;
+}).catch(() => { NAMES = NAMES_FALLBACK; });
+</script>
+</body>
+</html>
