@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مِرسال فاكتيف</title><style>
+:root{
+  --bg:#f2f5f2; --surface:#ffffff; --surface-2:#eaf0eb; --line:#d5e0d8;
+  --ink:#12211b; --muted:#5c6f66; --accent:#0f7a4a; --accent-hover:#0b6a40;
+  --on-accent:#ffffff; --warn:#8a5a06; --warn-bg:#fbf1de; --warn-line:#e8d3a8;
+  --done:#0f7a4a; --skip:#8a8f8c;
+  --danger:#9d2c1f; --danger-bg:#fbeae7; --danger-line:#e9c3bc;
+  --r:10px;
+  --f-body:"Segoe UI","Segoe UI Arabic",system-ui,-apple-system,"Helvetica Neue",Tahoma,Arial,sans-serif;
+  --f-display:"Segoe UI","Segoe UI Arabic",system-ui,-apple-system,"Helvetica Neue",Tahoma,Arial,sans-serif;
+  --f-mono:ui-monospace,"Segoe UI Mono",Consolas,"SF Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1411; --surface:#151e1a; --surface-2:#1d2823; --line:#2b3b34;
+    --ink:#e6eee9; --muted:#90a59b; --accent:#2fa96e; --accent-hover:#3cbb7d;
+    --on-accent:#04140c; --warn:#e6b263; --warn-bg:#2a2216; --warn-line:#453720;
+    --done:#2fa96e; --skip:#7b8884; --danger:#f08c7d; --danger-bg:#2c1714; --danger-line:#4a2620;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1411; --surface:#151e1a; --surface-2:#1d2823; --line:#2b3b34;
+  --ink:#e6eee9; --muted:#90a59b; --accent:#2fa96e; --accent-hover:#3cbb7d;
+  --on-accent:#04140c; --warn:#e6b263; --warn-bg:#2a2216; --warn-line:#453720;
+  --done:#2fa96e; --skip:#7b8884; --danger:#f08c7d; --danger-bg:#2c1714; --danger-line:#4a2620;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--f-body);
+  font-size:15px; line-height:1.6; direction:rtl;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px; margin:0 auto; padding-inline:18px; padding-block:0 48px}
+a{color:inherit}
+button,input,textarea,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ---------- شريط علوي ---------- */
+.top{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line)}
+.top-in{max-width:1080px; margin:0 auto; padding:12px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+.brand{font-family:var(--f-display); font-size:20px; font-weight:600; margin-inline-end:auto; display:flex; align-items:center; gap:9px}
+.dot{width:9px; height:9px; border-radius:50%; background:var(--accent)}
+.filechip{display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1px solid var(--line); border-radius:99px; padding:5px 12px; font-size:13px; color:var(--muted); max-width:100%}
+.filechip b{color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px}
+select.sheet{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:13px}
+.btn{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 13px; font-size:14px; cursor:pointer}
+.btn:hover{background:var(--surface-2)}
+.btn-primary{background:var(--accent); color:var(--on-accent); border-color:transparent; font-weight:600}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+/* ---------- شريط التقدم ---------- */
+.progress{display:flex; align-items:center; gap:14px; padding:16px 0 6px}
+.bar{flex:1; height:8px; border-radius:99px; background:var(--surface-2); overflow:hidden; border:1px solid var(--line)}
+.bar span{display:block; height:100%; background:var(--accent); width:0; transition:width .25s ease}
+.count{font-family:var(--f-mono); font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums}
+.count b{color:var(--ink); font-size:17px}
+
+/* ---------- البطاقة الحالية ---------- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px; margin-top:12px}
+.card-head{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:flex-start; padding-bottom:14px; border-bottom:1px solid var(--line)}
+.who{display:flex; flex-direction:column; gap:6px; margin-inline-end:auto; min-width:220px; max-width:360px}
+.who-label{font-weight:600; font-family:var(--f-display); font-size:12px; color:var(--muted)}
+.name-in{background:transparent; border:none; border-bottom:2px dashed var(--line); font-size:26px; font-weight:700; padding:2px 2px 4px; width:100%; max-width:340px}
+.name-in:focus{border-bottom-color:var(--accent); outline:none}
+.phone{font-family:var(--f-mono); font-size:15px; color:var(--muted); direction:ltr; text-align:right}
+.chips{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.chip{font-size:12.5px; padding:3px 10px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); color:var(--muted)}
+.chip.pkg{color:var(--ink); font-weight:600}
+.note{display:flex; gap:8px; align-items:flex-start; background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn); border-radius:9px; padding:9px 12px; font-size:13.5px; margin-top:12px}
+.note::before{content:"!"; font-weight:700; width:18px; height:18px; flex:none; border-radius:50%; border:1.5px solid currentColor; display:grid; place-items:center; font-size:12px; margin-top:2px}
+.msg-label{display:flex; justify-content:space-between; align-items:baseline; margin:16px 0 6px}
+.msg-label span{font-weight:600; font-family:var(--f-display); font-size:12px; color:var(--muted)}
+.msg-label em{font-style:normal; font-size:12px; color:var(--muted); font-family:var(--f-mono)}
+textarea.msg{width:100%; min-height:150px; resize:vertical; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:14px; font-size:14.5px; line-height:1.85}
+.actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; align-items:center}
+.send{display:inline-flex; align-items:center; gap:9px; background:var(--accent); color:var(--on-accent); text-decoration:none; font-weight:700; font-size:16px; padding:13px 22px; border-radius:10px}
+.send:hover{background:var(--accent-hover)}
+.send svg{width:19px; height:19px; fill:currentColor}
+.extchip{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; padding:5px 11px; border-radius:99px; border:1px solid var(--line); color:var(--muted); background:var(--surface-2)}
+.extchip::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--done)}
+.extchip.off{color:var(--warn); border-color:var(--warn-line); background:var(--warn-bg)}
+.extchip.off::before{background:var(--warn)}
+.alldone{background:var(--surface-2); border:1px solid var(--line); border-inline-start:3px solid var(--done); color:var(--ink); border-radius:10px; padding:11px 14px; font-size:14px; margin-top:12px}
+.card.is-done{border-style:dashed}
+.chip.state.sent{color:var(--done); border-color:currentColor; font-weight:600}
+.hint{font-size:12.5px; color:var(--muted); margin-inline-start:auto}
+
+/* ---------- القائمة ---------- */
+.sec{font-weight:600; font-family:var(--f-display); font-size:13px; color:var(--muted); margin:26px 0 8px; display:flex; gap:10px; align-items:center}
+.sec::after{content:""; flex:1; height:1px; background:var(--line)}
+.list{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+.row{display:grid; grid-template-columns:26px 1fr auto auto; gap:12px; align-items:center; background:var(--surface); padding:10px 14px; cursor:pointer; text-align:right; border:none; width:100%}
+.row:hover{background:var(--surface-2)}
+.row.active{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--accent)}
+.row .n{font-family:var(--f-mono); font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+.row .nm{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.row .ph{font-family:var(--f-mono); font-size:12.5px; color:var(--muted); direction:ltr}
+.state{font-size:12px; padding:2px 9px; border-radius:99px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+.state.sent{color:var(--done); border-color:currentColor; font-weight:600}
+.state.skipped{color:var(--skip)}
+.row.done .nm{color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px}
+
+.empty{background:var(--surface); border:1px dashed var(--line); border-radius:12px; padding:34px 20px; text-align:center; color:var(--muted)}
+.empty h2{font-family:var(--f-display); color:var(--ink); font-size:19px; margin:0 0 8px}
+.empty code{font-family:var(--f-mono); font-size:12.5px; background:var(--surface-2); padding:2px 6px; border-radius:5px; direction:ltr; display:inline-block}
+.foot{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:20px; font-size:13px; color:var(--muted)}
+.guard{display:none; gap:12px; align-items:flex-start; background:var(--danger-bg); border:1px solid var(--danger-line); color:var(--danger); border-radius:11px; padding:14px 16px; margin-top:16px; font-size:14px}
+.guard.show{display:flex}
+.guard b{display:block; font-family:var(--f-display); font-size:15px; margin-bottom:3px}
+.guard .btn{color:var(--danger); border-color:var(--danger-line); background:transparent; margin-inline-start:auto; flex:none; align-self:center}
+.send.locked{background:var(--surface-2); color:var(--muted); pointer-events:none}
+.browser-ok{font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px}
+.browser-ok::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--done)}
+.toast{position:fixed; inset-block-end:20px; inset-inline-start:20px; background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:9px; font-size:14px; opacity:0; transform:translateY(8px); transition:.2s; pointer-events:none; z-index:50}
+.toast.show{opacity:1; transform:none}
+@media (max-width:560px){
+  .name-in{font-size:22px}
+  .row{grid-template-columns:1fr auto; }
+  .row .n,.row .ph{display:none}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="dot"></span>مِرسال فاكتيف</div>
+    <div class="filechip" id="filechip">…</div>
+    <select class="sheet" id="sheet" title="الورقة"></select>
+    <span class="extchip" id="extChip"></span>
+    <button class="btn" id="refresh">تحديث من المجلد</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="guard" id="guard">
+    <div><b id="guardTitle">تنبيه: هذا ليس متصفح كروم</b>
+    <span id="guardText">واتساب بزنس مسجّل داخل كروم. لو أرسلت من هنا فالرسائل تخرج من الواتساب الآخر. أغلق هذه النافذة وافتح اللوحة في كروم: <code>http://127.0.0.1:8733</code></span></div>
+    <button class="btn" id="guardIgnore">أعرف، تجاهل</button>
+  </div>
+  <div class="progress">
+    <div class="count"><b id="cDone">0</b> من <span id="cAll">0</span> — أُرسلت</div>
+    <div class="bar"><span id="barFill"></span></div>
+    <div class="count" id="cLeft">متبقٍ 0</div>
+  </div>
+
+  <div id="stage"></div>
+
+  <div class="sec" id="secList">القائمة</div>
+  <div class="list" id="list"></div>
+
+  <div class="foot">
+    <button class="btn" id="copyStatus">نسخ عمود الحالة للإكسيل</button>
+    <button class="btn" id="resetDay">تصفير حالة هذا الملف</button>
+    <span id="footNote"></span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let DATA = null, STATE = {}, CUR = 0, LAST = null;
+
+const key = () => "factive-wa:" + (DATA ? DATA.file + "|" + DATA.sheet : "none");
+function loadState(){ try{ STATE = JSON.parse(localStorage.getItem(key()) || "{}"); }catch(e){ STATE = {}; } }
+function saveState(){ try{ localStorage.setItem(key(), JSON.stringify(STATE)); }catch(e){} }
+
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),1900); }
+
+function openMode(){
+  try { return localStorage.getItem("factive-wa:openMode") || (DATA && DATA.openMode === "app" ? "app" : "tab"); }
+  catch(e){ return "tab"; }
+}
+function waLink(phone, text){
+  const t = encodeURIComponent(text || "");
+  return openMode() === "app"
+    ? `whatsapp://send?phone=${phone}&text=${t}`
+    : `https://web.whatsapp.com/send?phone=${phone}&text=${t}&type=phone_number&app_absent=0`;
+}
+
+async function load(sheet){
+  $("#filechip").textContent = "…جاري القراءة";
+  const r = await fetch("/api/data" + (sheet ? "?sheet=" + encodeURIComponent(sheet) : ""));
+  DATA = await r.json();
+  if (DATA.error){
+    $("#filechip").innerHTML = "<b>لا يوجد ملف</b>";
+    $("#sheet").innerHTML = ""; $("#list").innerHTML = ""; $("#secList").style.display="none";
+    $("#stage").innerHTML = `<div class="empty"><h2>ضع ملف اليوم في المجلد</h2><p>${DATA.error.replace(/\n/g,"<br>")}</p></div>`;
+    updateProgress();
+    return;
+  }
+  $("#secList").style.display="";
+  $("#filechip").innerHTML = `<b>${DATA.file}</b> · ${DATA.fileTime}`;
+  $("#sheet").innerHTML = DATA.sheets.map(s => `<option ${s===DATA.sheet?"selected":""}>${s}</option>`).join("");
+  loadState();
+  CUR = DATA.rows.findIndex(r => !STATE[r.phone]);
+  if (CUR < 0) CUR = 0;
+  const note = [];
+  if (DATA.skipped) note.push(`تجاهلت ${DATA.skipped} صفًا بلا رقم صالح`);
+  note.push(`الأعمدة: الاسم «${DATA.columns.name||"?"}» · الرقم «${DATA.columns.phone||DATA.columns.link||"?"}» · الرسالة «${DATA.columns.message||"?"}»`);
+  $("#footNote").textContent = note.join(" — ");
+  render();
+}
+
+function render(){ renderCard(); renderList(); updateProgress(); }
+
+function renderCard(){
+  const rows = DATA.rows;
+  if (!rows.length){
+    $("#stage").innerHTML = `<div class="empty"><h2>لا توجد صفوف صالحة في هذه الورقة</h2><p>غيّر الورقة من الأعلى، أو تأكد أن فيها عمود رقم أو رابط واتساب.</p></div>`;
+    return;
+  }
+  if (CUR < 0 || CUR >= rows.length) CUR = 0;
+  const r = rows[CUR];
+  const st = STATE[r.phone];
+  const allDone = rows.every(x => STATE[x.phone]);
+
+  const warn = [];
+  if (r.dup) warn.push(r.dup);
+  (r.flags||[]).forEach(f => warn.push(f));
+
+  $("#stage").innerHTML = `
+  ${allDone ? `<div class="alldone">خلصت القائمة ✓ — أُرسلت ${rows.filter(x=>STATE[x.phone]==="sent").length} رسالة. تقدر تنسخ عمود الحالة وتلصقه في الإكسيل.</div>` : ""}
+  <section class="card${st ? " is-done" : ""}">
+    <div class="card-head">
+      <div class="who">
+        <label class="who-label" for="nameIn">الاسم في الرسالة</label>
+        <input class="name-in" id="nameIn" value="${esc(r.name)}" spellcheck="false">
+        <div class="phone">+${r.phone}</div>
+      </div>
+      <div class="chips">
+        ${r.package ? `<span class="chip pkg">${esc(r.package)}</span>` : ""}
+        ${r.country ? `<span class="chip">${esc(r.country)}</span>` : ""}
+        ${r.source ? `<span class="chip">${esc(r.source)}</span>` : ""}
+        <span class="chip">صف ${r.excelRow}</span>
+        ${st ? `<span class="chip state ${st}">${st==="sent"?"أُرسلت":"تخطّي"}</span>` : ""}
+      </div>
+    </div>
+    ${warn.map(w => `<div class="note">${esc(w)}</div>`).join("")}
+    <div class="msg-label"><span>الرسالة</span><em id="len"></em></div>
+    <textarea class="msg" id="msg" spellcheck="false">${esc(r.message)}</textarea>
+    <div class="actions">
+      <a class="send" id="sendBtn" target="_blank" rel="noopener" href="${r.link}">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2Zm5.5 14.1c-.2.6-1.3 1.2-1.8 1.2s-1.2.3-3.9-.9c-3.2-1.4-5.2-4.8-5.4-5s-1.3-1.7-1.3-3.3.8-2.3 1.1-2.6c.3-.3.6-.4.8-.4h.6c.2 0 .5-.1.7.5l1 2.4c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6s.7 1.3 1.6 2.1c1.1 1 2 1.3 2.3 1.4.3.1.5.1.7-.1l.9-1c.2-.2.4-.2.6-.1l2.2 1.1c.2.1.4.2.5.3s.1.6-.1 1.2Z"/></svg>
+        ${st === "sent" ? "إعادة فتح المحادثة" : "فتح واتساب والرسالة جاهزة"}
+      </a>
+      <button class="btn" id="copyMsg">نسخ الرسالة</button>
+      ${st ? `<button class="btn" id="clearBtn">إرجاعه للانتظار</button>` : `<button class="btn" id="skipBtn">تخطي</button>`}
+      <button class="btn" id="undoBtn" ${LAST ? "" : "disabled"}>تراجع</button>
+      <span class="hint">مع الإضافة: المحادثة تُفتح داخل واتساب فورًا بلا إعادة تحميل، والمسودة غير المُرسلة تبقى في مكانها</span>
+    </div>
+  </section>`;
+
+  const msg = $("#msg"), name = $("#nameIn"), send = $("#sendBtn");
+  const relink = () => { send.href = waLink(r.phone, msg.value); $("#len").textContent = msg.value.length + " حرف"; };
+  relink();
+  msg.addEventListener("input", relink);
+  name.addEventListener("input", () => {
+    const old = r.name, nu = name.value;
+    if (old && nu && msg.value.includes(old)) msg.value = msg.value.replace(old, nu);
+    r.name = nu; relink();
+  });
+  send.addEventListener("click", e => {
+    e.preventDefault();
+    if (openWa(send.href, r.phone, msg.value)) setTimeout(() => mark(r, "sent", msg.value), 150);
+  });
+  $("#copyMsg").addEventListener("click", () => {
+    navigator.clipboard.writeText(msg.value).then(()=>toast("نُسخت الرسالة"),()=>toast("تعذّر النسخ"));
+  });
+  $("#skipBtn")?.addEventListener("click", () => mark(r, "skipped", msg.value));
+  $("#clearBtn")?.addEventListener("click", () => { delete STATE[r.phone]; saveState(); render(); toast("رجع للانتظار"); });
+  $("#undoBtn").addEventListener("click", undo);
+  lockSend();
+}
+
+let WA_WIN = null;
+const WA_TAB = "factive-wa";
+function hasExt(){ return document.documentElement.getAttribute("data-factive-wa-ext") === "1"; }
+function openWa(url, phone, text){
+  // تطبيق واتساب على الكمبيوتر
+  if (openMode() === "app"){
+    window.location.href = url;
+    return true;
+  }
+  // الإضافة موجودة: توجّه تبويب واتساب الحالي بدل فتح تبويب جديد
+  if (hasExt()){
+    window.postMessage({ __factiveWa: 1, url, phone, text }, "*");
+    return true;
+  }
+  // بدون الإضافة: تبويب جديد (واتساب يمنع إعادة استخدام تبويبه من صفحة خارجية)
+  let w = null;
+  try { w = window.open(url, WA_TAB); } catch(e){}
+  if (!w){
+    toast("كروم منع فتح التبويب — اسمح بالنوافذ المنبثقة لـ 127.0.0.1 ثم أعد المحاولة");
+    return false;
+  }
+  WA_WIN = w;
+  try { w.focus(); } catch(e){}
+  return true;
+}
+
+function mark(r, status, message){
+  LAST = { phone: r.phone, prev: STATE[r.phone] || null, index: CUR };
+  STATE[r.phone] = status;
+  saveState();
+  fetch("/api/status", { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ name: r.name, phone: r.phone, status, package: r.package, message }) }).catch(()=>{});
+  const next = DATA.rows.findIndex((x, i) => i > CUR && !STATE[x.phone]);
+  CUR = next >= 0 ? next : DATA.rows.findIndex(x => !STATE[x.phone]);
+  if (CUR < 0) CUR = 0;
+  render();
+  toast(status === "sent" ? "تم ✓ — التالي جاهز" : "تخطّيته");
+}
+
+function undo(){
+  if (!LAST) return;
+  if (LAST.prev) STATE[LAST.phone] = LAST.prev; else delete STATE[LAST.phone];
+  CUR = LAST.index; LAST = null; saveState(); render();
+}
+
+function renderList(){
+  $("#list").innerHTML = DATA.rows.map((r, i) => {
+    const st = STATE[r.phone];
+    return `<button class="row ${i===CUR?"active":""} ${st?"done":""}" data-i="${i}">
+      <span class="n">${i+1}</span>
+      <span class="nm">${esc(r.name || r.nameRaw || "—")}</span>
+      <span class="ph">+${r.phone}</span>
+      <span class="state ${st||""}">${st==="sent"?"أُرسلت":st==="skipped"?"تخطّي":"بالانتظار"}</span>
+    </button>`;
+  }).join("");
+  $("#list").querySelectorAll(".row").forEach(b =>
+    b.addEventListener("click", () => { CUR = +b.dataset.i; render(); window.scrollTo({top:0, behavior:"smooth"}); }));
+}
+
+function updateProgress(){
+  const rows = DATA && DATA.rows ? DATA.rows : [];
+  const sent = rows.filter(r => STATE[r.phone] === "sent").length;
+  const handled = rows.filter(r => STATE[r.phone]).length;
+  $("#cDone").textContent = sent;
+  $("#cAll").textContent = rows.length;
+  $("#cLeft").textContent = "متبقٍ " + (rows.length - handled);
+  $("#barFill").style.width = rows.length ? (handled / rows.length * 100) + "%" : "0";
+}
+
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+$("#refresh").addEventListener("click", () => load($("#sheet").value));
+$("#sheet").addEventListener("change", e => load(e.target.value));
+$("#copyStatus").addEventListener("click", () => {
+  if (!DATA || !DATA.rows) return;
+  const txt = DATA.rows.map(r => STATE[r.phone]==="sent" ? "تم الإرسال" : STATE[r.phone]==="skipped" ? "تخطّي" : "").join("\n");
+  navigator.clipboard.writeText(txt).then(()=>toast("انسخها الآن في عمود الملاحظات — نفس ترتيب الصفوف"),()=>toast("تعذّر النسخ"));
+});
+$("#resetDay").addEventListener("click", () => {
+  if (!confirm("تصفير حالة الإرسال لهذا الملف؟")) return;
+  STATE = {}; saveState(); CUR = 0; render(); toast("تم التصفير");
+});
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey||e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("#sendBtn")?.click(); }
+});
+
+/* ---- حارس المتصفح: يمنع الإرسال من غير كروم (واتساب بزنس داخل كروم) ---- */
+let BROWSER_OK = true;
+async function checkBrowser(){
+  const ua = navigator.userAgent;
+  const isBrave = !!(navigator.brave && await navigator.brave.isBrave().catch(()=>false));
+  const isChrome = /Chrome\//.test(ua) && !/Edg\/|OPR\/|YaBrowser/.test(ua) && !isBrave;
+  BROWSER_OK = isChrome;
+  const g = $("#guard");
+  if (localStorage.getItem("factive-wa:ignoreBrowser") === "1") return;
+  if (!isChrome){
+    $("#guardTitle").textContent = isBrave ? "تنبيه: أنت داخل Brave" : "تنبيه: هذا ليس متصفح كروم";
+    $("#guardText").innerHTML = (isBrave
+      ? "واتساب بزنس مسجّل في كروم، وهذا المتصفح فيه واتسابك الشخصي. "
+      : "واتساب بزنس مسجّل في كروم. ")
+      + 'الرسائل ستخرج من الحساب الخطأ. افتح هذا الرابط في كروم: <code>' + location.href + '</code>';
+    g.classList.add("show");
+    lockSend();
+  }
+}
+function lockSend(){
+  if (BROWSER_OK || !DATA || DATA.lockBrowser === false) return;
+  const b = $("#sendBtn");
+  if (b){ b.classList.add("locked"); b.setAttribute("aria-disabled","true"); b.removeAttribute("href"); }
+}
+$("#guardIgnore").addEventListener("click", () => {
+  localStorage.setItem("factive-wa:ignoreBrowser","1");
+  BROWSER_OK = true; $("#guard").classList.remove("show"); render();
+});
+
+function paintExtChip(){
+  const c = $("#extChip");
+  if (hasExt()){ c.className = "extchip"; c.textContent = "فتح داخلي بلا تحميل"; c.title = "الإضافة مفعّلة — المحادثة تُفتح داخل تبويب واتساب الموجود بلا إعادة تحميل"; }
+  else { c.className = "extchip off"; c.textContent = "بدون الإضافة — تبويب لكل شخص"; c.title = "ثبّت الإضافة من مجلد chrome-extension ليُعاد استخدام تبويب واحد"; }
+}
+window.addEventListener("message", e => {
+  if (e.source === window && e.data && e.data.__factiveWaAck === 1 && !e.data.ok)
+    toast("تعذّر فتح واتساب عبر الإضافة");
+});
+
+paintExtChip();
+checkBrowser();
+load();
+</script>
+</body>
+</html>
