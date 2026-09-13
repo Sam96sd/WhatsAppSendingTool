@@ -8,25 +8,6 @@
 
 ---
 
-## النشر على GitHub Pages (مرة واحدة، ٥ دقائق)
-
-1. في GitHub اضغط **New repository** — سمّه مثلًا `factive-sender`، واجعله **Public**
-   (خاصية Pages للمستودعات الخاصة تحتاج اشتراكًا مدفوعًا؛ الموقع لا يحتوي أي بيانات، فالعلني آمن هنا).
-2. **Add file ← Upload files** وارفع الملفات الثلاثة كما هي:
-   - `index.html`
-   - `names_ar.json`
-   - `xlsx.full.min.js`
-3. **Commit changes**.
-4. **Settings ← Pages ← Source: Deploy from a branch** ← الفرع `main` والمجلد `/ (root)` ← **Save**.
-5. بعد دقيقة تقريبًا يظهر الرابط بالشكل:
-   `https://<اسم-حسابك>.github.io/factive-sender/`
-
-أرسل هذا الرابط للمدربين. لو حبيت لاحقًا نطاقًا مثل `sender.factive.app`:
-**Settings ← Pages ← Custom domain** ثم أضف سجل `CNAME` في إعدادات النطاق يشير إلى `<اسم-حسابك>.github.io`.
-
-> **تحديث الموقع لاحقًا:** ارفع النسخة الجديدة من `index.html` فوق القديمة في نفس المستودع — يتحدّث تلقائيًا خلال دقيقة.
-> اطلب من المدربين تحديث الصفحة (Ctrl+Shift+R) بعد أي تحديث.
-
 ---
 
 ## كيف يستخدمه المدرب
