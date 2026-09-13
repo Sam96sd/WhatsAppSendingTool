@@ -219,7 +219,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
       <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 10.9h7c-.5 3.9-3.1 7.4-7 8.5V12H5V6.3l7-3.1v8.7Z"/></svg>
       الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم — لا أرقام ولا أسماء تغادر جهازك.
     </p>
-    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٤</p>
+    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٥</p>
   </section>
 
   <div id="app" hidden>
@@ -395,14 +395,19 @@ function setMode(m){
   if(m === "app") toast("على آيفون: إن كان عندك واتساب العادي والبزنس، النظام يفتح الافتراضي عنده");
   if(ROWS.length) render();
 }
+function altWay(){ try { return localStorage.getItem("fs:alt") === "1"; } catch(e){ return false; } }
 function waLink(phone, text){
   const t = encodeURIComponent(text || "");
-  if(mode() === "web") return `https://web.whatsapp.com/send?phone=${phone}&text=${t}&type=phone_number&app_absent=0`;
-  if(mode() === "wb"){
-    const fb = encodeURIComponent(`https://wa.me/${phone}?text=${t}`);
-    return `intent://send?phone=${phone}&text=${t}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${fb};end`;
+  const m = mode();
+  if(m === "web") return `https://web.whatsapp.com/send?phone=${phone}&text=${t}&type=phone_number&app_absent=0`;
+  const plain = `https://wa.me/${phone}?text=${t}`;
+  if(m === "wb"){
+    // رابط wa.me موجّهًا لحزمة واتساب بزنس — يمرّ على معالج الروابط فيفتح المحادثة المحددة في كل مرة
+    if(altWay()) return plain;
+    return `intent://api.whatsapp.com/send?phone=${phone}&text=${t}` +
+           `#Intent;scheme=https;package=com.whatsapp.w4b;S.browser_fallback_url=${encodeURIComponent(plain)};end`;
   }
-  return `whatsapp://send?phone=${phone}&text=${t}`;
+  return altWay() ? `whatsapp://send?phone=${phone}&text=${t}` : plain;
 }
 
 /* ====================== التخزين ====================== */
@@ -504,7 +509,8 @@ function renderCard(){
       <button class="btn" id="copyMsg">نسخ الرسالة</button>
       ${st ? `<button class="btn" id="clearBtn">إرجاعه للانتظار</button>` : `<button class="btn" id="skipBtn">تخطي</button>`}
       <button class="btn" id="undoBtn" ${LAST ? "" : "disabled"}>تراجع</button>
-      <span class="hint">يفتح واتساب والرسالة مكتوبة في الخانة — تضغط إرسال، ثم ترجع هنا للتالي.</span>
+      <span class="hint">يفتح واتساب والرسالة مكتوبة في الخانة — تضغط إرسال، ثم ترجع هنا للتالي.
+        ${mode() !== "web" ? `<a href="#" id="altLink" style="color:var(--accent)">ما فتحت المحادثة الصحيحة؟ جرّب طريقة أخرى</a>` : ""}</span>
     </div>
   </section>`;
 
@@ -526,6 +532,13 @@ function renderCard(){
   $("#skipBtn")?.addEventListener("click", () => mark(r, "skipped", msg.value));
   $("#clearBtn")?.addEventListener("click", () => { delete STATE[r.phone]; saveState(); render(); toast("رجع للانتظار"); });
   $("#undoBtn").addEventListener("click", undo);
+  $("#altLink")?.addEventListener("click", e => {
+    e.preventDefault();
+    const now = !altWay();
+    try { localStorage.setItem("fs:alt", now ? "1" : "0"); } catch(err){}
+    toast(now ? "بدّلت طريقة الفتح — جرّب الآن" : "رجعت للطريقة الأساسية");
+    render();
+  });
 }
 
 function mark(r, status){
