@@ -103,6 +103,8 @@ select.pill{padding-inline:9px}
 .name-in{background:transparent; border:none; border-bottom:2px dashed var(--line); font-size:24px; font-weight:700; padding:2px 2px 4px; width:100%}
 .name-in:focus{border-bottom-color:var(--accent); outline:none}
 .phone{font-family:var(--f-mono); font-size:14px; color:var(--muted); direction:ltr; text-align:right}
+.name-raw{font-size:15px; color:var(--muted); display:flex; gap:6px; align-items:baseline}
+.name-raw b{font-family:var(--f-mono); font-size:16px; color:var(--accent); direction:ltr; unicode-bidi:isolate; font-weight:600; user-select:all}
 .chips{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
 .chip{font-size:12px; padding:3px 9px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); color:var(--muted)}
 .chip.pkg{color:var(--ink); font-weight:600}
@@ -488,6 +490,7 @@ function renderCard(){
       <div class="who">
         <label class="lbl" for="nameIn">الاسم في الرسالة</label>
         <input class="name-in" id="nameIn" value="${esc(r.name)}" spellcheck="false">
+        ${/[A-Za-z]/.test(r.nameRaw || "") ? `<div class="name-raw" title="الاسم كما كُتب في الملف"><span>الأصل:</span> <b>${esc(r.nameRaw)}</b></div>` : ""}
         <div class="phone">+${r.phone}</div>
       </div>
       <div class="chips">
