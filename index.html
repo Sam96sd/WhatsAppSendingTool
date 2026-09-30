@@ -74,6 +74,11 @@ select.pill{padding-inline:9px}
 .hero h1{font-family:var(--f-display); font-size:26px; margin:0 0 8px; text-wrap:balance}
 .hero p{color:var(--muted); margin:0 0 20px; max-width:56ch}
 .drop{border:2px dashed var(--line); background:var(--surface); border-radius:16px; padding:34px 20px; text-align:center; transition:border-color .15s, background .15s}
+.linkrow{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap}
+.linkrow input{flex:1 1 240px; min-width:0; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:10px 12px; font:inherit; font-size:14px; direction:ltr; text-align:left; color:inherit}
+.linkrow input:focus{outline:2px solid var(--accent); outline-offset:1px}
+.linkhint{font-size:12.5px; color:var(--muted); margin-top:7px}
+.ordiv{text-align:center; color:var(--muted); font-size:13px; margin-top:14px}
 .drop.over{border-color:var(--accent); background:var(--surface-2)}
 .drop .big{font-weight:600; font-family:var(--f-display); font-size:19px; margin-bottom:6px}
 .drop .sub{color:var(--muted); font-size:13.5px; margin-bottom:18px}
@@ -168,6 +173,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
       <option value="app">آيفون — تطبيق واتساب</option>
       <option value="web">كمبيوتر — واتساب ويب</option>
     </select>
+    <button class="btn" id="reloadSheet" hidden title="اقرأ آخر نسخة من الشيت">تحديث من الشيت</button>
     <button class="btn" id="newFile" hidden>ملف آخر</button>
   </div>
 </header>
@@ -198,7 +204,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
 
     <section class="stepcard locked" id="stepFile">
       <div class="stepnum">الخطوة ٢</div>
-      <div class="stepttl">ارفع ملف اليوم.</div>
+      <div class="stepttl">ارفع ملف اليوم، أو الصق رابط Google Sheet.</div>
       <div class="drop" id="drop">
         <div class="big">اسحب الملف هنا</div>
         <div class="sub">‏Excel (xlsx) أو CSV — أي اسم، أي عدد أوراق</div>
@@ -208,6 +214,12 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
         </button>
         <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.xls" hidden>
       </div>
+      <div class="ordiv">أو</div>
+      <div class="linkrow">
+        <input type="url" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/…" spellcheck="false" autocomplete="off">
+        <button class="btn" id="linkGo">فتح من الرابط</button>
+      </div>
+      <div class="linkhint">الشيت لازم يكون مشاركًا بـ«أي شخص لديه الرابط — عارض». كل ما تعدّل الشيت اضغط «تحديث من الشيت».</div>
       <div class="lockmsg">اختر جهازك في الخطوة ١ أولًا</div>
     </section>
 
@@ -219,9 +231,9 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
 
     <p class="privacy">
       <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 10.9h7c-.5 3.9-3.1 7.4-7 8.5V12H5V6.3l7-3.1v8.7Z"/></svg>
-      الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم — لا أرقام ولا أسماء تغادر جهازك.
+      الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم. عند استخدام رابط شيت، القراءة تتم من جوجل مباشرة إلى متصفحك.
     </p>
-    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٥</p>
+    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٦</p>
   </section>
 
   <div id="app" hidden>
@@ -347,7 +359,7 @@ function detectColumns(header, body){
 function cleanPhone(rawPhone, rawLink, country){
   let d = "";
   if(rawLink){ const m = toEn(rawLink).match(/(?:wa\.me\/|phone=)(\+?\d[\d\s\-]*)/); if(m) d = m[1].replace(/\D/g,""); }
-  if(!d && rawPhone) d = toEn(rawPhone).replace(/\D/g,"");
+  if(!d && rawPhone && String(rawPhone).length <= 30) d = toEn(rawPhone).replace(/\D/g,"");  // خلية نص طويل ليست رقمًا
   if(!d) return "";
   d = d.replace(/^00/,"");
   const c = norm(country).toLowerCase();
@@ -425,7 +437,54 @@ async function handleFile(file){
   if(!mode()){ toast("اختر جهازك أولًا"); return; }
   try{
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type:"array", cellDates:false });
+    SOURCE_URL = "";
+    handleWorkbook(XLSX.read(buf, { type:"array", cellDates:false }), file.name, file.name);
+  }catch(err){
+    toast("تعذّرت قراءة الملف — تأكد أنه xlsx أو csv");
+    console.error(err);
+  }
+}
+/* ====================== رابط جوجل شيت ====================== */
+let SOURCE_URL = "";
+const SHEET_ID_RE = /\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/;
+const NOT_SHARED = "الشيت غير مفتوح بالرابط — من جوجل شيت: مشاركة ← «أي شخص لديه الرابط» (عارض)";
+async function loadFromLink(url, keepSheet){
+  url = String(url || "").trim();
+  const m = url.match(SHEET_ID_RE);
+  if(!m){ toast("الرابط غير صحيح — انسخه من شريط العنوان في جوجل شيت"); return; }
+  if(!mode()){ toast("اختر جهازك أولًا"); return; }
+  const id = m[1];
+  const btn = $("#linkGo"), rb = $("#reloadSheet");
+  btn.disabled = rb.disabled = true; toast("جاري قراءة الشيت…");
+  let wb = null;
+  try{
+    // كل الأوراق دفعة واحدة
+    const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`);
+    const buf = new Uint8Array(await r.arrayBuffer());
+    if(r.ok && buf[0] === 0x50 && buf[1] === 0x4B) wb = XLSX.read(buf, { type:"array", cellDates:false });
+  }catch(e){ console.warn("xlsx export", e); }
+  if(!wb){
+    try{
+      // بديل: الورقة المفتوحة في الرابط فقط
+      const gid = (url.match(/[#&?]gid=(\d+)/) || [])[1] || "0";
+      const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);
+      const txt = await r.text();
+      if(r.ok && txt && !/^\s*</.test(txt)){
+        wb = XLSX.read(txt, { type:"string", raw:true });
+        wb.SheetNames = wb.SheetNames.map(() => "الورقة");
+        wb.Sheets = { "الورقة": wb.Sheets[Object.keys(wb.Sheets)[0]] };
+        toast("قرأت الورقة المفتوحة في الرابط فقط");
+      }
+    }catch(e){ console.warn("gviz", e); }
+  }
+  btn.disabled = rb.disabled = false;
+  if(!wb){ toast(NOT_SHARED); return; }
+  SOURCE_URL = url;
+  try { localStorage.setItem("fs:sheetUrl", url); } catch(e){}
+  handleWorkbook(wb, "gsheet:" + id, "Google Sheet", keepSheet);
+}
+function handleWorkbook(wb, fileKey, label, keepSheet){
+  {
     SHEETS = {};
     wb.SheetNames.forEach(n => {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:"", blankrows:false, raw:false });
@@ -433,17 +492,27 @@ async function handleFile(file){
     });
     const names = Object.keys(SHEETS);
     if(!names.length){ toast("الملف لا يحتوي على بيانات"); return; }
-    FILE = file.name;
-    $("#fileChip").textContent = FILE; $("#fileChip").hidden = false;
+    FILE = fileKey;
+    $("#fileChip").textContent = SOURCE_URL ? label + " · " + new Date().toTimeString().slice(0,5) : label;
+    $("#fileChip").hidden = false;
+    $("#reloadSheet").hidden = !SOURCE_URL;
     $("#sheetSel").innerHTML = names.map(n => `<option>${esc(n)}</option>`).join("");
     $("#sheetSel").hidden = names.length < 2;
     $("#newFile").hidden = false;
     $("#hero").hidden = true; $("#app").hidden = false;
-    selectSheet(names[0]);
-  }catch(err){
-    toast("تعذّرت قراءة الملف — تأكد أنه xlsx أو csv");
-    console.error(err);
+    const first = (keepSheet && names.includes(keepSheet)) ? keepSheet : (names.find(sheetHasRows) || names[0]);
+    $("#sheetSel").value = first;
+    selectSheet(first);
   }
+}
+/* أول ورقة فيها أرقام ورسائل فعلًا — نتجاوز أوراق الملخص وما شابه */
+function sheetHasRows(name){
+  const rows = SHEETS[name]; if(!rows || !rows.length) return false;
+  const hi = findHeader(rows), header = rows[hi], body = rows.slice(hi+1);
+  const idx = detectColumns(header, body);
+  if(idx.message == null) return false;
+  const cell = (r,k) => (idx[k] == null || idx[k] >= r.length) ? "" : String(r[idx[k]] ?? "").trim();
+  return body.some(r => cleanPhone(cell(r,"phone"), cell(r,"link"), cell(r,"country")));
 }
 function selectSheet(name){
   SHEET = name;
@@ -581,6 +650,10 @@ function updateProgress(){
 /* ====================== الأحداث ====================== */
 $("#pickBtn").addEventListener("click", () => $("#fileInput").click());
 $("#fileInput").addEventListener("change", e => handleFile(e.target.files[0]));
+$("#linkGo").addEventListener("click", () => loadFromLink($("#sheetUrl").value));
+$("#sheetUrl").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); loadFromLink($("#sheetUrl").value); } });
+$("#reloadSheet").addEventListener("click", () => loadFromLink(SOURCE_URL, SHEET));
+try { $("#sheetUrl").value = localStorage.getItem("fs:sheetUrl") || ""; } catch(e){}
 $("#newFile").addEventListener("click", () => { $("#hero").hidden = false; $("#app").hidden = true; $("#fileInput").value = ""; });
 const drop = $("#drop");
 ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
