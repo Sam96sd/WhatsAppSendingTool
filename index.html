@@ -87,6 +87,17 @@ select.pill{padding-inline:9px}
 .privacy{margin-top:18px; font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:flex-start}
 .privacy svg{width:16px;height:16px;fill:var(--done);flex:none;margin-top:3px}
 
+.orline{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12.5px; margin:14px 0 10px}
+.orline::before,.orline::after{content:""; flex:1; height:1px; background:var(--line)}
+.sheetrow{display:flex; gap:8px; flex-wrap:wrap}
+.sheetin{flex:1 1 260px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:9px 12px; font-size:13.5px; font-family:var(--f-mono)}
+.recent{display:flex; flex-direction:column; gap:6px}
+.recent .rf{display:flex; gap:10px; align-items:center; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; text-align:right; width:100%}
+.recent .rf:hover{border-color:var(--accent)}
+.recent .rf b{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1}
+.recent .rf small{color:var(--muted); font-size:12px; white-space:nowrap}
+.recent .rf .x{background:transparent; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:0 4px}
+
 /* ---------- التقدم ---------- */
 .progress{display:flex; align-items:center; gap:12px; padding:14px 0 4px}
 .bar{flex:1; height:8px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden}
@@ -162,6 +173,8 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
   <div class="top-in">
     <div class="brand"><span class="dot"></span>مِرسال فاكتيف</div>
     <span class="pill" id="fileChip" hidden></span>
+    <select class="pill" id="fileSel" title="التنقّل بين الملفات المفتوحة في هذه الجلسة" hidden></select>
+    <button class="btn" id="refreshSheet" title="إعادة قراءة الشيت من الرابط" hidden>تحديث</button>
     <select class="pill" id="sheetSel" title="الورقة" hidden></select>
     <select class="pill" id="modeSel" title="الجهاز" hidden>
       <option value="wb">أندرويد — واتساب بزنس</option>
@@ -208,7 +221,22 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
         </button>
         <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.xls" hidden>
       </div>
+      <div class="orline"><span>أو</span></div>
+      <div class="sheetrow">
+        <input type="url" class="sheetin" id="sheetUrl" placeholder="الصق رابط Google Sheet (مشارَك: أي شخص معه الرابط يمكنه العرض)" spellcheck="false" dir="ltr">
+        <button class="btn" id="sheetGo">قراءة الشيت</button>
+      </div>
       <div class="lockmsg">اختر جهازك في الخطوة ١ أولًا</div>
+    </section>
+
+    <section class="stepcard" id="recentCard" hidden>
+      <div class="stepnum">ملفات هذه الجلسة</div>
+      <div class="stepttl">افتح ملفًا سبق تحميله — حالة الإرسال محفوظة لكل ملف على حدة.</div>
+      <div class="recent" id="recentList"></div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn" id="backBtn" hidden>رجوع للملف الحالي</button>
+        <button class="btn" id="forgetFiles">مسح قائمة الملفات</button>
+      </div>
     </section>
 
     <div class="steps">
@@ -221,7 +249,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
       <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 10.9h7c-.5 3.9-3.1 7.4-7 8.5V12H5V6.3l7-3.1v8.7Z"/></svg>
       الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم — لا أرقام ولا أسماء تغادر جهازك.
     </p>
-    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٥</p>
+    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٦</p>
   </section>
 
   <div id="app" hidden>
@@ -248,6 +276,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
 /* ============================ الحالة ============================ */
 const $ = s => document.querySelector(s);
 let SHEETS = {}, FILE = "", SHEET = "", ROWS = [], STATE = {}, CUR = 0, LAST = null, NAMES = {};
+let FILES = {};   // الملفات المفتوحة في هذه الجلسة: name -> {sheets, kind:"file"|"sheet", url, at}
 let PEEK = -1;   // index chosen from the list AFTER the list is finished (review mode)
 
 const DIAL = { "الكويت":"965", "قطر":"974", "الامارات":"971", "الإمارات":"971",
@@ -421,31 +450,106 @@ function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("sho
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 /* ====================== تحميل الملف ====================== */
+function parseWorkbook(buf){
+  const wb = XLSX.read(buf, { type:"array", cellDates:false });
+  const sheets = {};
+  wb.SheetNames.forEach(n => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:"", blankrows:false, raw:false });
+    if(rows.some(r => r.some(c => String(c).trim()))) sheets[n] = rows.map(r => r.map(c => fixEmoji(String(c ?? "").trim())));
+  });
+  return sheets;
+}
 async function handleFile(file){
   if(!file) return;
   if(!mode()){ toast("اختر جهازك أولًا"); return; }
   try{
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type:"array", cellDates:false });
-    SHEETS = {};
-    wb.SheetNames.forEach(n => {
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:"", blankrows:false, raw:false });
-      if(rows.some(r => r.some(c => String(c).trim()))) SHEETS[n] = rows.map(r => r.map(c => fixEmoji(String(c ?? "").trim())));
-    });
-    const names = Object.keys(SHEETS);
-    if(!names.length){ toast("الملف لا يحتوي على بيانات"); return; }
-    FILE = file.name;
-    $("#fileChip").textContent = FILE; $("#fileChip").hidden = false;
-    $("#sheetSel").innerHTML = names.map(n => `<option>${esc(n)}</option>`).join("");
-    $("#sheetSel").hidden = names.length < 2;
-    $("#newFile").hidden = false;
-    $("#hero").hidden = true; $("#app").hidden = false;
-    selectSheet(names[0]);
+    const sheets = parseWorkbook(await file.arrayBuffer());
+    if(!Object.keys(sheets).length){ toast("الملف لا يحتوي على بيانات"); return; }
+    FILES[file.name] = { sheets, kind:"file", url:"", at: Date.now() };
+    saveFiles();
+    openFile(file.name);
   }catch(err){
     toast("تعذّرت قراءة الملف — تأكد أنه xlsx أو csv");
     console.error(err);
   }
 }
+/* ---- Google Sheet عبر الرابط (يجب أن يكون مشاركًا: أي شخص معه الرابط يمكنه العرض) ---- */
+function sheetIdOf(url){ const m = String(url||"").match(/\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/); return m ? m[1] : ""; }
+async function handleSheetUrl(url, silent){
+  url = (url || "").trim();
+  const id = sheetIdOf(url);
+  if(!id){ toast("هذا ليس رابط Google Sheet صالحًا"); return; }
+  if(!mode()){ toast("اختر جهازك أولًا"); return; }
+  const btn = $("#sheetGo"); btn.disabled = true; btn.textContent = "… جارٍ القراءة";
+  try{
+    const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`, { credentials:"omit" });
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const sheets = parseWorkbook(await r.arrayBuffer());
+    if(!Object.keys(sheets).length) throw new Error("empty");
+    // اسم ثابت للشيت حتى تبقى حالة الإرسال محفوظة عند التحديث
+    const existing = Object.keys(FILES).find(k => FILES[k].kind === "sheet" && sheetIdOf(FILES[k].url) === id);
+    const name = existing || ("شيت جوجل " + id.slice(0, 6));
+    FILES[name] = { sheets, kind:"sheet", url, at: Date.now() };
+    saveFiles();
+    openFile(name);
+    if(!silent) toast("قُرئ الشيت ✓");
+  }catch(err){
+    console.error(err);
+    toast("تعذّرت قراءة الشيت — تأكد أن المشاركة «أي شخص معه الرابط: عارض»، ثم أعد المحاولة");
+  }
+  btn.disabled = false; btn.textContent = "قراءة الشيت";
+}
+/* ---- التنقّل بين الملفات المفتوحة ---- */
+function openFile(name){
+  const f = FILES[name]; if(!f) return;
+  SHEETS = f.sheets; FILE = name;
+  const names = Object.keys(SHEETS);
+  $("#fileChip").textContent = FILE; $("#fileChip").hidden = Object.keys(FILES).length > 1;
+  $("#refreshSheet").hidden = f.kind !== "sheet";
+  $("#sheetSel").innerHTML = names.map(n => `<option>${esc(n)}</option>`).join("");
+  $("#sheetSel").hidden = names.length < 2;
+  $("#newFile").hidden = false;
+  $("#hero").hidden = true; $("#app").hidden = false;
+  renderFileSel();
+  selectSheet(names[0]);
+}
+function filesSorted(){ return Object.keys(FILES).sort((a,b) => FILES[b].at - FILES[a].at); }
+function renderFileSel(){
+  const sel = $("#fileSel"), names = filesSorted();
+  sel.hidden = names.length < 2;
+  sel.innerHTML = names.map(n => `<option value="${esc(n)}" ${n===FILE?"selected":""}>${FILES[n].kind==="sheet"?"🔗 ":"📄 "}${esc(n)}</option>`).join("");
+}
+function renderRecent(){
+  const names = filesSorted(), card = $("#recentCard");
+  card.hidden = !names.length;
+  $("#backBtn").hidden = !FILE;
+  $("#recentList").innerHTML = names.map(n => {
+    const f = FILES[n], st = (() => { try { return JSON.parse(localStorage.getItem("fs:" + n + "|" + Object.keys(f.sheets)[0]) || "{}"); } catch(e){ return {}; } })();
+    const done = Object.keys(st).length;
+    return `<button type="button" class="rf" data-n="${esc(n)}">
+      <span>${f.kind==="sheet"?"🔗":"📄"}</span><b>${esc(n)}</b>
+      <small>${done ? done + " مُعالَج · " : ""}${new Date(f.at).toLocaleDateString("ar-EG")}</small>
+      <span class="x" title="إزالة من القائمة" data-x="${esc(n)}">✕</span>
+    </button>`;
+  }).join("");
+  $("#recentList").querySelectorAll(".rf").forEach(b => b.addEventListener("click", e => {
+    const x = e.target.closest("[data-x]");
+    if(x){ e.stopPropagation(); delete FILES[x.dataset.x]; saveFiles(); if(FILE === x.dataset.x){ FILE = ""; } renderRecent(); renderFileSel(); return; }
+    openFile(b.dataset.n);
+  }));
+}
+/* ---- حفظ الملفات المفتوحة في المتصفح (حتى 10 ملفات، ويُتجاهل الحفظ إن كبر الحجم) ---- */
+function saveFiles(){
+  const names = filesSorted().slice(0, 10);
+  for(const n of Object.keys(FILES)) if(!names.includes(n)) delete FILES[n];
+  try{
+    const json = JSON.stringify(FILES);
+    if(json.length < 3_000_000) localStorage.setItem("fs:files", json);
+    else localStorage.removeItem("fs:files");
+  }catch(e){}
+  renderRecent();
+}
+function loadFiles(){ try { FILES = JSON.parse(localStorage.getItem("fs:files") || "{}") || {}; } catch(e){ FILES = {}; } }
 function selectSheet(name){
   SHEET = name;
   const rows = SHEETS[name];
@@ -595,7 +699,16 @@ function updateProgress(){
 /* ====================== الأحداث ====================== */
 $("#pickBtn").addEventListener("click", () => $("#fileInput").click());
 $("#fileInput").addEventListener("change", e => handleFile(e.target.files[0]));
-$("#newFile").addEventListener("click", () => { $("#hero").hidden = false; $("#app").hidden = true; $("#fileInput").value = ""; });
+$("#newFile").addEventListener("click", () => { $("#hero").hidden = false; $("#app").hidden = true; $("#fileInput").value = ""; renderRecent(); window.scrollTo({ top:0 }); });
+$("#backBtn").addEventListener("click", () => { if(FILE && FILES[FILE]) openFile(FILE); });
+$("#forgetFiles").addEventListener("click", () => {
+  if(!confirm("مسح قائمة الملفات المحفوظة؟ (حالة الإرسال لكل ملف تبقى محفوظة وتعود عند رفع الملف نفسه مرة أخرى)")) return;
+  FILES = {}; saveFiles(); renderFileSel(); toast("مُسحت القائمة");
+});
+$("#fileSel").addEventListener("change", e => openFile(e.target.value));
+$("#sheetGo").addEventListener("click", () => handleSheetUrl($("#sheetUrl").value));
+$("#sheetUrl").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); handleSheetUrl(e.target.value); } });
+$("#refreshSheet").addEventListener("click", () => { const f = FILES[FILE]; if(f && f.kind === "sheet") handleSheetUrl(f.url); });
 const drop = $("#drop");
 ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
@@ -620,6 +733,7 @@ document.addEventListener("keydown", e => {
 });
 
 /* ====================== الإقلاع ====================== */
+loadFiles(); renderRecent();
 if(mode()) setMode(mode());
 fetch("names_ar.json").then(r => r.ok ? r.json() : {}).then(j => {
   NAMES = {};
