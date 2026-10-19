@@ -249,7 +249,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
       <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 10.9h7c-.5 3.9-3.1 7.4-7 8.5V12H5V6.3l7-3.1v8.7Z"/></svg>
       الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم — لا أرقام ولا أسماء تغادر جهازك.
     </p>
-    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٦</p>
+    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٧</p>
   </section>
 
   <div id="app" hidden>
@@ -347,12 +347,24 @@ function findHeader(rows){
 }
 function detectColumns(header, body){
   const heads = header.map(norm);
-  const byWord = (...ws) => { for(let i=0;i<heads.length;i++) for(const w of ws) if(heads[i].includes(w)) return i; return null; };
+  // الأولوية للكلمة ثم للعمود: نجرّب الكلمة الأولى على كل الأعمدة قبل الانتقال للكلمة التالية،
+  // والمقارنة بلا حساسية لحالة الأحرف. كلمة قصيرة مثل "نص" تطابق فقط كعنوان كامل (حتى لا تلتقط «منصة الدفع»).
+  const hl = heads.map(h => h.toLowerCase());
+  const byWord = (...ws) => {
+    for(const w of ws){
+      const exact = w.startsWith("=");
+      const key = exact ? w.slice(1) : w;
+      for(let i=0;i<hl.length;i++){
+        if(exact ? (hl[i] === key || hl[i] === "ال"+key) : hl[i].includes(key)) return i;
+      }
+    }
+    return null;
+  };
   const idx = {
     link: byWord("رابط","link","wa.me"),
-    phone: byWord("رقم","جوال","موبايل","phone","mobile","number"),
-    name: byWord("اسم","name"),
-    message: byWord("رسالة","message","نص"),
+    phone: byWord("رقم الواتساب","واتساب","whatsapp","رقم","جوال","موبايل","phone","mobile","number"),
+    name: byWord("الاسم","اسم","name"),
+    message: byWord("الرسالة الجاهزة","الرسالة","رسالة","message","msg","=نص"),
     country: byWord("دولة","country"),
     package: byWord("باقة","package","اشتراك"),
     source: byWord("مصدر","source")
