@@ -136,6 +136,8 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
 .send svg{width:19px;height:19px;fill:currentColor}
 .hint{font-size:12.5px; color:var(--muted); flex-basis:100%}
 
+.jump{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px}
+.jumpin{flex:1 1 220px; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:8px 12px; font-size:14px}
 /* ---------- القائمة ---------- */
 .sec{font-weight:600; font-family:var(--f-display); font-size:12.5px; color:var(--muted); margin:24px 0 8px; display:flex; gap:10px; align-items:center}
 .sec::after{content:""; flex:1; height:1px; background:var(--line)}
@@ -260,6 +262,11 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
     </div>
     <div id="stage"></div>
     <div class="sec">القائمة</div>
+    <div class="jump">
+      <input class="jumpin" id="jumpIn" placeholder="انتقال سريع: رقم الصف في الإكسيل، أو اسم، أو رقم هاتف" spellcheck="false">
+      <button class="btn" id="jumpGo">انتقال</button>
+      <button class="btn" id="markBefore" title="يعتبر كل الصفوف قبل الصف الحالي مُرسَلة (لمن أرسل لهم خارج الأداة)">علّم ما قبله كمُرسَل</button>
+    </div>
     <div class="list" id="list"></div>
     <div class="foot">
       <button class="btn" id="copyStatus">نسخ عمود الحالة للإكسيل</button>
@@ -735,6 +742,35 @@ $("#devices").addEventListener("click", e => {
 $("#copyStatus").addEventListener("click", () => {
   const txt = ROWS.map(r => STATE[r.phone]==="sent" ? "تم الإرسال" : STATE[r.phone]==="skipped" ? "تخطّي" : "").join("\n");
   navigator.clipboard.writeText(txt).then(() => toast("انسخها في عمود الملاحظات — نفس ترتيب الصفوف"), () => toast("تعذّر النسخ"));
+});
+/* ---- الانتقال السريع لصف ---- */
+function jumpTo(q){
+  q = (q || "").trim(); if(!q || !ROWS.length) return;
+  const qn = toEn(q).replace(/\s+/g,"");
+  let i = -1;
+  if(/^\d+$/.test(qn)){
+    i = ROWS.findIndex(r => String(r.excelRow) === qn);          // رقم الصف في الإكسيل
+    if(i < 0 && +qn >= 1 && +qn <= ROWS.length) i = +qn - 1;     // أو ترتيبه في القائمة
+    if(i < 0) i = ROWS.findIndex(r => r.phone.includes(qn.replace(/^0+/,""))); // أو جزء من رقم الهاتف
+  } else {
+    const ql = q.toLowerCase();
+    i = ROWS.findIndex(r => (r.name||"").toLowerCase().includes(ql) || (r.nameRaw||"").toLowerCase().includes(ql));
+  }
+  if(i < 0){ toast("ما لقيت صفًا يطابق «" + q + "»"); return; }
+  CUR = i; PEEK = i; render();
+  const row = $("#list").querySelector(`.row[data-i="${i}"]`);
+  if(row) row.scrollIntoView({ block:"center", behavior:"smooth" });
+  toast(`انتقلت إلى ${ROWS[i].name || ROWS[i].nameRaw} (صف ${ROWS[i].excelRow})`);
+}
+$("#jumpGo").addEventListener("click", () => jumpTo($("#jumpIn").value));
+$("#jumpIn").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); jumpTo(e.target.value); } });
+$("#markBefore").addEventListener("click", () => {
+  if(!ROWS.length) return;
+  const n = ROWS.slice(0, CUR).filter(r => !STATE[r.phone]).length;
+  if(!n){ toast("لا يوجد صفوف بالانتظار قبل الصف الحالي"); return; }
+  if(!confirm(`تعليم ${n} صفًا قبل «${ROWS[CUR].name || ROWS[CUR].nameRaw}» (صف ${ROWS[CUR].excelRow}) كمُرسَلة؟`)) return;
+  ROWS.slice(0, CUR).forEach(r => { if(!STATE[r.phone]) STATE[r.phone] = "sent"; });
+  saveState(); LAST = null; PEEK = -1; render(); toast(`عُلّم ${n} صفًا كمُرسَل`);
 });
 $("#resetAll").addEventListener("click", () => {
   if(!confirm("تصفير حالة الإرسال لهذا الملف؟")) return;
