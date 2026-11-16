@@ -251,7 +251,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
       <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 10.9h7c-.5 3.9-3.1 7.4-7 8.5V12H5V6.3l7-3.1v8.7Z"/></svg>
       الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم — لا أرقام ولا أسماء تغادر جهازك.
     </p>
-    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٧</p>
+    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٨</p>
   </section>
 
   <div id="app" hidden>
@@ -282,7 +282,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
 <script>
 /* ============================ الحالة ============================ */
 const $ = s => document.querySelector(s);
-let SHEETS = {}, FILE = "", SHEET = "", ROWS = [], STATE = {}, CUR = 0, LAST = null, NAMES = {};
+let SHEETS = {}, FILE = "", SHEET = "", ROWS = [], STATE = {}, CUR = 0, LAST = null, NAMES = {}, FAMILIES = new Set();
 let FILES = {};   // الملفات المفتوحة في هذه الجلسة: name -> {sheets, kind:"file"|"sheet", url, at}
 let PEEK = -1;   // index chosen from the list AFTER the list is finished (review mode)
 
@@ -337,6 +337,21 @@ function arabize(word){
   if(NAMES[key]) return [NAMES[key], "dict"];
   if(key.startsWith("al") && NAMES[key.slice(2)]) return ["ال"+NAMES[key.slice(2)], "dict"];
   return [translit(word), "rules"];
+}
+/* اسم عائلة؟ (قائمة _عائلات في names_ar.json، أو كلمة تبدأ بـ Al/El أطول من 5 أحرف وليست اسمًا أول معروفًا) */
+function isFamily(word){
+  const key = word.toLowerCase().replace(/[^a-z]/g,"");
+  if(!key) return false;
+  if(FAMILIES.has(key)) return true;
+  if(NAMES[key]) return false;
+  return /^(al|el)[a-z]{4,}$/.test(key) && !NAMES[key.slice(2)];
+}
+/* الاسم الأول الحقيقي: إذا كانت الكلمة الأولى اسم عائلة نأخذ الكلمة الثانية (قاعدة سامر 26/10) */
+function pickFirst(toks){
+  const k0 = toks[0].toLowerCase().replace(/[^a-z]/g,"");
+  if(toks.length >= 3 && /^(al|el|bin|ibn|bn)$/.test(k0) && !isFamily(toks[2])) return 2;   // "Al Rahili Meshal"
+  if(toks.length >= 2 && isFamily(toks[0]) && !isFamily(toks[1])) return 1;                 // "Alotaibi Fahad"
+  return 0;
 }
 
 /* ====================== قراءة الملف ====================== */
@@ -414,13 +429,21 @@ function buildMessage(message, name){
   if(!message) return { message:"", display, quality, flags:["لا توجد رسالة جاهزة في هذا الصف"] };
   const toks = (name || "").match(LATIN)?.filter(t => t.replace(/[^A-Za-z]/g,"").length >= 2) || [];
   if(toks.length){
-    const [firstAr, src] = arabize(toks[0]);
+    const fi = pickFirst(toks);
+    const [firstAr, src] = arabize(toks[fi]);
     display = firstAr; quality = src;
     let replaced = false;
+    if(fi > 0){
+      /* الرسالة الجاهزة تحمل اسم العائلة (الكلمة الأولى) — نستبدل الاسم اللاتيني كله بعد كلمة النداء بالاسم الأول الصحيح */
+      const escR = t => t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+      const fam = toks.slice(0, fi).map(escR).join("\\s+");
+      const reAll = new RegExp("(اخوي|أخوي|اخي|أخي|اختي|أختي|أخت|اخت|الغالي|الغالية)\\s+" + fam + "(?:\\s+" + escR(toks[fi]) + ")?", "i");
+      if(reAll.test(message)){ message = message.replace(reAll, (m, g) => g + " " + firstAr); replaced = true; }
+    }
     for(const tok of [...toks].sort((a,b)=>b.length-a.length)){
       const [ar] = arabize(tok);
       const re = new RegExp("(?<![A-Za-z])" + tok.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + "(?![A-Za-z])", "gi");
-      if(re.test(message)){ message = message.replace(re, ar); replaced = true; }
+      if(re.test(message)){ message = message.replace(re, fi > 0 && tok === toks[0] ? firstAr : ar); replaced = true; }
     }
     if(!replaced){
       const m = message.match(/(اخوي|أخوي|اخي|أخي|اختي|أختي|الغالي|الغالية)\s+([A-Za-z][A-Za-z'’\-\.]*)/);
@@ -786,6 +809,7 @@ if(mode()) setMode(mode());
 fetch("names_ar.json").then(r => r.ok ? r.json() : {}).then(j => {
   NAMES = {};
   for(const k in j) if(!k.startsWith("_")) NAMES[k.toLowerCase()] = j[k];
+  FAMILIES = new Set((j["_عائلات"] || []).map(x => String(x).toLowerCase().replace(/[^a-z]/g,"")));
   if(!Object.keys(NAMES).length) NAMES = NAMES_FALLBACK;
 }).catch(() => { NAMES = NAMES_FALLBACK; });
 </script>
