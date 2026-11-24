@@ -151,6 +151,12 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
 .row .nm small{display:block; font-weight:400; font-size:11.5px; color:var(--muted); font-family:var(--f-mono); direction:ltr; text-align:right}
 .state{font-size:11.5px; padding:2px 9px; border-radius:99px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
 .state.sent{color:var(--done); border-color:currentColor; font-weight:600}
+.state.other{color:#1d6fb8; border-color:currentColor; font-weight:600}
+.state.claim{color:#b26a00; border-color:currentColor}
+.sharebar{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; font-size:12.5px; color:var(--muted);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:7px 11px; margin-top:9px}
+.sharebar b{color:inherit} .sharebar .bad{color:#b3261e; font-weight:600} .sharebar .good{color:var(--done); font-weight:600}
+.sharebar a{color:var(--accent)}
 .row.done .nm{color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px}
 .alldone{background:var(--surface-2); border:1px solid var(--line); border-inline-start:3px solid var(--done);
   border-radius:10px; padding:11px 13px; font-size:14px; margin-top:11px}
@@ -251,7 +257,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
       <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 10.9h7c-.5 3.9-3.1 7.4-7 8.5V12H5V6.3l7-3.1v8.7Z"/></svg>
       الملف يُقرأ داخل متصفحك فقط ولا يُرفع إلى أي خادم — لا أرقام ولا أسماء تغادر جهازك.
     </p>
-    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٨</p>
+    <p style="margin-top:10px;font-size:12px;color:var(--muted)">الإصدار ٩</p>
   </section>
 
   <div id="app" hidden>
@@ -260,6 +266,7 @@ textarea.msg{width:100%; min-height:132px; resize:vertical; background:var(--sur
       <div class="bar"><span id="barFill"></span></div>
       <div class="count" id="cLeft">متبقٍ 0</div>
     </div>
+    <div class="sharebar" id="shareBar" hidden></div>
     <div id="stage"></div>
     <div class="sec">القائمة</div>
     <div class="jump">
@@ -285,6 +292,168 @@ const $ = s => document.querySelector(s);
 let SHEETS = {}, FILE = "", SHEET = "", ROWS = [], STATE = {}, CUR = 0, LAST = null, NAMES = {}, FAMILIES = new Set();
 let FILES = {};   // الملفات المفتوحة في هذه الجلسة: name -> {sheets, kind:"file"|"sheet", url, at}
 let PEEK = -1;   // index chosen from the list AFTER the list is finished (review mode)
+
+/* ====================== علامات مشتركة بين موظفي خدمة العملاء (الإصدار ٩) ======================
+   لملف خدمة العملاء فقط (الرابط الثابت، أو ملف «خدمة-العملاء-…» من الإيميل): من يضغط «فتح واتساب» يظهر للكل «أرسلها فلان»،
+   والاسم المعروض يُحجز لصاحبه ٣ دقائق حتى لا يفتحه موظفان معاً. باقي الملفات كما في الإصدار ٨ تماماً.
+   المفتاح عام عن قصد: لا يقرأ ولا يكتب إلا تبويب العلامات (آخر ٨ أرقام، اسم الموظف، الوقت). */
+const SHARED_GW = "https://script.google.com/macros/s/AKfycbzbwx95qJwdrbqMotWZrQE6l93kgfgJ4ui4DjUAH5Q8FXKNww7kx8ASwV9i4ktvx2tP/exec";
+const SHARED_MK = "mk_Y6gVj4W0oo3qFAmcqocTjKOk";
+const CS_SHEET_ID = "1PmtVveOhPosbiRcbDAHG_7fzjUjG_d5y05hk06O8-mA";
+const SHARED_DAYS = 14;
+let SHARED = {}, SHARED_ON = false, SHARED_OK = null, CLAIMING = "", CLAIMED = "", FLUSHING = false, TIMES = {};
+const l8 = p => String(p || "").replace(/\D/g, "").slice(-8);
+function isSharedFile(){
+  const f = FILES[FILE]; if(!f || !SHARED_GW || SHARED_GW.startsWith("__")) return false;
+  return (f.kind === "sheet" && sheetIdOf(f.url) === CS_SHEET_ID) || /^خدمة-العملاء/.test(FILE);
+}
+function myDev(){
+  try{ let d = localStorage.getItem("fs:dev");
+    if(!d){ d = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-5); localStorage.setItem("fs:dev", d); }
+    return d.replace(/[^a-z0-9]/gi, "").slice(0, 16);
+  }catch(e){ return (window.__dev = window.__dev || ("x" + Math.random().toString(36).slice(2, 12))); }
+}
+function myName(){ try{ return localStorage.getItem("fs:who") || ""; }catch(e){ return ""; } }
+function askName(force){
+  let n = myName(); if(n && !force) return n;
+  n = (prompt("اكتب اسمك — يظهر لزملائك في خدمة العملاء عند الإرسال:", n) || "").trim().slice(0, 40);
+  if(n){ try{ localStorage.setItem("fs:who", n); }catch(e){} }
+  return n || myName();
+}
+function othersMark(r){ if(!SHARED_ON) return null; const m = SHARED[l8(r.phone)]; return m && m.dev !== myDev() ? m : null; }
+function handled(r){ return !!(STATE[r.phone] || othersMark(r)); }
+function hhmm(t){ const d = new Date(t); return isNaN(d) ? "" : d.toLocaleTimeString("ar-KW", { hour:"2-digit", minute:"2-digit" }); }
+function markText(m){ return m.st === "sent" ? `أرسلها ${m.who} ${hhmm(m.t)}` : `مع ${m.who} الآن`; }
+function nextOpen(from){
+  const i = ROWS.findIndex((x, j) => j > from && !handled(x));
+  return i >= 0 ? i : Math.max(0, ROWS.findIndex(x => !handled(x)));
+}
+function shareBar(){
+  const b = $("#shareBar"); if(!b) return;
+  b.hidden = !SHARED_ON; if(!SHARED_ON) return;
+  const st = SHARED_OK === false ? `<span class="bad">⚠️ لا يوجد اتصال — علاماتك لا تصل لزملائك الآن (تُرسل تلقائياً عند عودة الاتصال)</span>`
+           : SHARED_OK ? `<span class="good">✓ متصل</span>` : `… جارٍ الاتصال`;
+  b.innerHTML = `👥 علامات مشتركة مع زملائك · باسم: <b>${esc(myName() || "بدون اسم")}</b> <a href="#" id="whoEdit">تغيير</a> · ${st}`;
+  $("#whoEdit").addEventListener("click", e => { e.preventDefault(); askName(true); shareBar(); });
+}
+function setShareOk(v){ if(SHARED_OK !== v){ SHARED_OK = v; shareBar(); } }
+async function gw(params){
+  const u = new URL(SHARED_GW);
+  Object.entries(Object.assign({ mk: SHARED_MK }, params)).forEach(([k, v]) => u.searchParams.set(k, v));
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 15000);
+  try{
+    const r = await fetch(u, { signal: ac.signal, credentials: "omit" });
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+    return j;
+  } finally { clearTimeout(t); }
+}
+async function sharedPull(){
+  if(!SHARED_ON) return false;
+  try{
+    const j = await gw({ mode: "marks", days: SHARED_DAYS }), m = {};
+    for(const k in j.marks){ const [st, who, dev, t] = j.marks[k]; m[k] = { st, who, dev, t }; }
+    SHARED = m; setShareOk(true);
+    flushQueue();
+    return true;
+  }catch(e){ setShareOk(false); return false; }
+}
+/* الكتابة: طابور محفوظ في الجهاز، يُعاد إرساله حتى ينجح (لو انقطع الاتصال لا تضيع العلامة) */
+function queue(){ try{ return JSON.parse(localStorage.getItem("fs:q") || "[]"); }catch(e){ return []; } }
+function saveQueue(q){ try{ localStorage.setItem("fs:q", JSON.stringify(q.slice(-200))); }catch(e){} }
+function sharedPush(st, phones, of){
+  if(!SHARED_ON) return;
+  const ph = [...new Set(phones.map(l8).filter(x => x.length === 8))]; if(!ph.length) return;
+  const q = queue(); q.push({ st, ph: ph.join(","), who: myName() || "بدون اسم", dev: myDev(), of: of || myDev(), at: Date.now() }); saveQueue(q);
+  ph.forEach(k => {
+    if(st === "sent") SHARED[k] = { st: "sent", who: myName() || "بدون اسم", dev: myDev(), t: new Date().toISOString() };
+    else if(st === "clear" || (st === "release" && SHARED[k] && SHARED[k].dev === myDev() && SHARED[k].st === "claim")) delete SHARED[k];
+  });
+  flushQueue();
+}
+async function flushQueue(){
+  if(FLUSHING) return; FLUSHING = true;
+  try{
+    let q = queue();
+    while(q.length){
+      const it = q[0];
+      const age = Date.now() - it.at;
+      if(age > 2 * 86400000 || (it.st !== "sent" && age > 10 * 60000)){ q.shift(); saveQueue(q); continue; }   // قديم — لا يُرسل
+      let j;
+      try{ j = await gw({ mode: "mark", st: it.st, ph: it.ph, who: it.who, dev: it.dev, of: it.of || it.dev }); }
+      catch(e){ setShareOk(false); break; }
+      setShareOk(true);
+      q = queue(); q.shift(); saveQueue(q);
+      if(it.st === "sent" && j.res){
+        const clash = Object.entries(j.res).filter(([k, v]) => v.before && v.before[2] !== myDev());
+        if(clash.length){
+          const [k, v] = clash[0], r = ROWS.find(x => l8(x.phone) === k);
+          toast(`⚠️ انتبه: ${v.before[0] === "sent" ? "أرسل" : "فتح"} ${v.before[1]} لـ«${r ? (r.name || r.nameRaw) : k}» قبلك — تأكد ألا تتكرر الرسالة`);
+        }
+      }
+    }
+  } finally { FLUSHING = false; }
+}
+/* حجز الاسم المعروض: الخادم يرفض إذا كان مع زميل أو أُرسل له */
+async function claimRow(r){
+  const k = l8(r.phone);
+  if(!SHARED_ON || !k || CLAIMED === k || CLAIMING === k || handled(r)) return;
+  CLAIMING = k; const prev = CLAIMED;
+  try{
+    const j = await gw({ mode: "mark", st: "claim", ph: k, who: myName() || "بدون اسم", dev: myDev() });
+    setShareOk(true);
+    const res = j.res && j.res[k];
+    if(res && res.ok){
+      CLAIMED = k;
+      if(prev && prev !== k){ const pr = ROWS.find(x => l8(x.phone) === prev); if(!pr || !STATE[pr.phone]) sharedPush("release", [prev]); }
+    } else if(res && res.by){
+      const [st, who, dev, t] = res.by; SHARED[k] = { st, who, dev, t };
+      if(ROWS[CUR] && l8(ROWS[CUR].phone) === k){
+        toast(`«${r.name || r.nameRaw}» ${markText(SHARED[k])} — انتقلت للتالي`);
+        PEEK = -1; CUR = nextOpen(CUR);
+      }
+      render();
+    }
+  }catch(e){ setShareOk(false); }
+  finally{ CLAIMING = ""; }
+}
+/* أوقات العلامات المحلية لملف خدمة العملاء: علامة أقدم من ١٤ يوماً تُنسى (لو رجع نفس الرقم بعد شهر لا يُخفى عن أحد) */
+function loadTimes(){ try{ TIMES = JSON.parse(localStorage.getItem(key() + "|t") || "{}"); }catch(e){ TIMES = {}; } }
+function saveTimes(){ try{ localStorage.setItem(key() + "|t", JSON.stringify(TIMES)); }catch(e){} }
+function sharedPrepare(){
+  SHARED_ON = isSharedFile();
+  if(!SHARED_ON){ CLAIMED = ""; shareBar(); return; }
+  askName(false);
+  loadTimes();
+  const now = Date.now(), old = now - SHARED_DAYS * 86400000; let changed = false;
+  for(const ph in STATE){
+    if(!TIMES[ph]){ TIMES[ph] = now; changed = true; }                 // علامة من الإصدار ٨: تُعتبر من اليوم
+    else if(TIMES[ph] < old){ delete STATE[ph]; delete TIMES[ph]; changed = true; }
+  }
+  if(changed){ saveState(); saveTimes(); }
+  shareBar();
+}
+async function sharedAfterLoad(){
+  if(!SHARED_ON) return;
+  if(!await sharedPull()){ render(); return; }
+  // علامات «أرسلت» في هذا الجهاز ولم تصل لزملائه بعد (مثلاً من الإصدار ٨) → تُرسل لهم مرة واحدة
+  const mine = ROWS.filter(r => STATE[r.phone] === "sent" && (SHARED[l8(r.phone)] || {}).st !== "sent").map(r => r.phone);
+  if(mine.length) sharedPush("sent", mine);
+  const r = ROWS[CUR];
+  if(r && PEEK < 0 && othersMark(r)) CUR = nextOpen(CUR);
+  render();
+}
+async function sharedTick(){
+  if(!SHARED_ON || document.hidden) return;
+  const ok = await sharedPull();
+  const r = ROWS[CUR];
+  if(ok && r && PEEK < 0 && !STATE[r.phone] && othersMark(r)){
+    toast(`«${r.name || r.nameRaw}» ${markText(othersMark(r))} — انتقلت للتالي`);
+    CUR = nextOpen(CUR); render();          // الكرت يتغيّر فقط إذا أخذ زميل الاسم الحالي
+  } else { renderList(); updateProgress(); }
+}
+setInterval(sharedTick, 30000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden) sharedTick(); });
 
 const DIAL = { "الكويت":"965", "قطر":"974", "الامارات":"971", "الإمارات":"971",
   "السعودية":"966", "البحرين":"973", "عمان":"968", "عُمان":"968",
@@ -608,13 +777,14 @@ function selectSheet(name){
     ROWS.push({ excelRow: hi+2+n, nameRaw: cell(r,"name"), name: b.display, quality: b.quality,
       phone, country, package: cell(r,"package"), source: cell(r,"source"), message: b.message, flags: b.flags });
   });
-  loadState();
-  CUR = Math.max(0, ROWS.findIndex(r => !STATE[r.phone])); PEEK = -1;
+  loadState(); sharedPrepare();
+  CUR = Math.max(0, ROWS.findIndex(r => !handled(r))); PEEK = -1;
   const cols = k => idx[k] != null && header[idx[k]] ? header[idx[k]] : "؟";
   $("#footNote").textContent =
     (skipped ? `تجاهلت ${skipped} صفًا بلا رقم صالح — ` : "") +
     `الأعمدة: الاسم «${cols("name")}» · الرقم «${idx.phone != null ? cols("phone") : cols("link")}» · الرسالة «${cols("message")}»`;
   render();
+  sharedAfterLoad();
 }
 
 /* ====================== العرض ====================== */
@@ -626,12 +796,13 @@ function renderCard(){
     return;
   }
   if(CUR < 0 || CUR >= ROWS.length) CUR = 0;
-  const r = ROWS[CUR], st = STATE[r.phone];
-  const allDone = ROWS.every(x => STATE[x.phone]);
+  let r = ROWS[CUR], st = STATE[r.phone];
+  const allDone = ROWS.every(x => handled(x));
   if(allDone && PEEK < 0){
-    const sentN = ROWS.filter(x => STATE[x.phone] === "sent").length;
+    const sentN = ROWS.filter(x => STATE[x.phone] === "sent" || (othersMark(x) || {}).st === "sent").length;
+    const withN = ROWS.filter(x => !STATE[x.phone] && (othersMark(x) || {}).st === "claim").length;
     $("#stage").innerHTML = `
-    <div class="alldone">خلصت القائمة ✓ — أُرسلت ${sentN} رسالة${ROWS.length - sentN ? ` وتخطّيت ${ROWS.length - sentN}` : ""}.</div>
+    <div class="alldone">خلصت القائمة ✓ — أُرسلت ${sentN} رسالة${ROWS.length - sentN - withN ? ` وتخطّيت ${ROWS.length - sentN - withN}` : ""}${withN ? ` · ${withN} مع زملائك الآن` : ""}.</div>
     <section class="card is-done" style="text-align:center; padding:28px 18px">
       <div style="font-size:40px; line-height:1">🎉</div>
       <b style="display:block; font-size:20px; margin:10px 0 6px">لا يوجد أحد بالانتظار</b>
@@ -639,9 +810,11 @@ function renderCard(){
     </section>`;
     return;
   }
-  if(allDone) CUR = PEEK;
+  if(allDone){ CUR = PEEK; r = ROWS[CUR]; st = STATE[r.phone]; }
   const warn = [...(r.flags || [])];
   if(allDone && st === "sent") warn.unshift("⚠️ أُرسلت لهذا الشخص مسبقاً — وضع مراجعة فقط، لا تُرسل مرة ثانية");
+  const om = othersMark(r);
+  if(om) warn.unshift(om.st === "sent" ? `⚠️ ${markText(om)} — لا تُرسل مرة ثانية` : `⚠️ هذا الاسم مع ${om.who} الآن — اختر اسماً آخر`);
 
   $("#stage").innerHTML = `
   ${allDone ? `<div class="alldone">خلصت القائمة ✓ — أُرسلت ${ROWS.filter(x=>STATE[x.phone]==="sent").length} رسالة.</div>` : ""}
@@ -658,7 +831,7 @@ function renderCard(){
         ${r.country ? `<span class="chip">${esc(r.country)}</span>` : ""}
         ${r.source ? `<span class="chip">${esc(r.source)}</span>` : ""}
         <span class="chip">صف ${r.excelRow}</span>
-        ${st ? `<span class="chip sent">${st === "sent" ? "أُرسلت" : "تخطّي"}</span>` : ""}
+        ${st ? `<span class="chip sent">${st === "sent" ? "أُرسلت" : "تخطّي"}</span>` : om ? `<span class="chip">${esc(markText(om))}</span>` : ""}
       </div>
     </div>
     ${warn.map(w => `<div class="note">${esc(w)}</div>`).join("")}
@@ -670,7 +843,7 @@ function renderCard(){
         ${st === "sent" ? "إعادة فتح المحادثة" : "فتح واتساب والرسالة جاهزة"}
       </a>
       <button class="btn" id="copyMsg">نسخ الرسالة</button>
-      ${st ? `<button class="btn" id="clearBtn">إرجاعه للانتظار</button>` : `<button class="btn" id="skipBtn">تخطي</button>`}
+      ${st ? `<button class="btn" id="clearBtn">إرجاعه للانتظار</button>` : om && om.st === "sent" ? `<button class="btn" id="clearOther">لم يُرسل فعلاً — أرجعه للانتظار</button>` : `<button class="btn" id="skipBtn">تخطي</button>`}
       <button class="btn" id="undoBtn" ${LAST ? "" : "disabled"}>تراجع</button>
       <span class="hint">يفتح واتساب والرسالة مكتوبة في الخانة — تضغط إرسال، ثم ترجع هنا للتالي.
         ${mode() !== "web" ? `<a href="#" id="altLink" style="color:var(--accent)">ما فتحت المحادثة الصحيحة؟ جرّب طريقة أخرى</a>` : ""}</span>
@@ -690,10 +863,19 @@ function renderCard(){
     if(mode() !== "web"){ e.preventDefault(); window.location.href = send.href; }  // يفتح التطبيق ويبقى الموقع مكانه
     setTimeout(() => mark(r, "sent", msg.value), 400);
   });
+  if(SHARED_ON && !st && !om) claimRow(r);
   $("#copyMsg").addEventListener("click", () => navigator.clipboard.writeText(msg.value)
     .then(() => toast("نُسخت الرسالة"), () => toast("تعذّر النسخ")));
   $("#skipBtn")?.addEventListener("click", () => mark(r, "skipped", msg.value));
-  $("#clearBtn")?.addEventListener("click", () => { delete STATE[r.phone]; saveState(); render(); toast("رجع للانتظار"); });
+  $("#clearBtn")?.addEventListener("click", () => {
+    const was = STATE[r.phone]; delete STATE[r.phone]; saveState();
+    if(was === "sent") sharedPush("clear", [r.phone]);
+    render(); toast("رجع للانتظار");
+  });
+  $("#clearOther")?.addEventListener("click", () => {
+    if(!confirm(`إلغاء علامة «${markText(om)}»؟ افعل هذا فقط إذا تأكدت أن الرسالة لم تُرسل.`)) return;
+    sharedPush("clear", [r.phone], om.dev); render(); toast("رجع للانتظار عند الجميع");
+  });
   $("#undoBtn").addEventListener("click", undo);
   $("#altLink")?.addEventListener("click", e => {
     e.preventDefault();
@@ -707,23 +889,34 @@ function renderCard(){
 function mark(r, status){
   LAST = { phone: r.phone, prev: STATE[r.phone] || null, index: CUR };
   STATE[r.phone] = status; saveState(); PEEK = -1;
-  const next = ROWS.findIndex((x,i) => i > CUR && !STATE[x.phone]);
-  CUR = next >= 0 ? next : Math.max(0, ROWS.findIndex(x => !STATE[x.phone]));
+  if(SHARED_ON){
+    TIMES[r.phone] = Date.now(); saveTimes();
+    if(status === "sent"){ sharedPush("sent", [r.phone]); }
+    else if(LAST.prev === "sent"){ sharedPush("clear", [r.phone]); }
+    else sharedPush("release", [r.phone]);
+    if(CLAIMED === l8(r.phone)) CLAIMED = "";
+  }
+  CUR = nextOpen(CUR);
   render();
   toast(status === "sent" ? "تم ✓ — التالي جاهز" : "تخطّيته");
 }
 function undo(){
   if(!LAST) return;
+  const was = STATE[LAST.phone];
   if(LAST.prev) STATE[LAST.phone] = LAST.prev; else delete STATE[LAST.phone];
+  if(SHARED_ON){
+    if(was === "sent" && STATE[LAST.phone] !== "sent") sharedPush("clear", [LAST.phone]);
+    if(was !== "sent" && STATE[LAST.phone] === "sent") sharedPush("sent", [LAST.phone]);
+  }
   CUR = LAST.index; LAST = null; PEEK = -1; saveState(); render();
 }
 function renderList(){
   $("#list").innerHTML = ROWS.map((r,i) => {
-    const st = STATE[r.phone];
-    return `<button class="row ${i===CUR?"active":""} ${st?"done":""}" data-i="${i}">
+    const st = STATE[r.phone], om = st ? null : othersMark(r);
+    return `<button class="row ${i===CUR?"active":""} ${st || (om && om.st === "sent") ?"done":""}" data-i="${i}">
       <span class="n">${i+1}</span>
       <span class="nm">${esc(r.name || r.nameRaw || "—")}<small>+${r.phone}</small></span>
-      <span class="state ${st||""}">${st==="sent"?"أُرسلت":st==="skipped"?"تخطّي":"بالانتظار"}</span>
+      <span class="state ${st || (om ? (om.st === "sent" ? "other" : "claim") : "")}">${st==="sent"?"أُرسلت":st==="skipped"?"تخطّي":om?esc(markText(om)):"بالانتظار"}</span>
     </button>`;
   }).join("");
   $("#list").querySelectorAll(".row").forEach(b => b.addEventListener("click", () => {
@@ -731,11 +924,11 @@ function renderList(){
   }));
 }
 function updateProgress(){
-  const sent = ROWS.filter(r => STATE[r.phone] === "sent").length;
-  const handled = ROWS.filter(r => STATE[r.phone]).length;
+  const sent = ROWS.filter(r => STATE[r.phone] === "sent" || (!STATE[r.phone] && (othersMark(r) || {}).st === "sent")).length;
+  const done = ROWS.filter(r => handled(r)).length;
   $("#cDone").textContent = sent; $("#cAll").textContent = ROWS.length;
-  $("#cLeft").textContent = "متبقٍ " + (ROWS.length - handled);
-  $("#barFill").style.width = ROWS.length ? (handled/ROWS.length*100) + "%" : "0";
+  $("#cLeft").textContent = "متبقٍ " + (ROWS.length - done);
+  $("#barFill").style.width = ROWS.length ? (done/ROWS.length*100) + "%" : "0";
 }
 
 /* ====================== الأحداث ====================== */
@@ -789,15 +982,17 @@ $("#jumpGo").addEventListener("click", () => jumpTo($("#jumpIn").value));
 $("#jumpIn").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); jumpTo(e.target.value); } });
 $("#markBefore").addEventListener("click", () => {
   if(!ROWS.length) return;
-  const n = ROWS.slice(0, CUR).filter(r => !STATE[r.phone]).length;
+  const n = ROWS.slice(0, CUR).filter(r => !handled(r)).length;
   if(!n){ toast("لا يوجد صفوف بالانتظار قبل الصف الحالي"); return; }
   if(!confirm(`تعليم ${n} صفًا قبل «${ROWS[CUR].name || ROWS[CUR].nameRaw}» (صف ${ROWS[CUR].excelRow}) كمُرسَلة؟`)) return;
-  ROWS.slice(0, CUR).forEach(r => { if(!STATE[r.phone]) STATE[r.phone] = "sent"; });
+  const bulk = ROWS.slice(0, CUR).filter(r => !handled(r));
+  bulk.forEach(r => { STATE[r.phone] = "sent"; TIMES[r.phone] = Date.now(); });
+  if(SHARED_ON){ saveTimes(); sharedPush("sent", bulk.map(r => r.phone)); }
   saveState(); LAST = null; PEEK = -1; render(); toast(`عُلّم ${n} صفًا كمُرسَل`);
 });
 $("#resetAll").addEventListener("click", () => {
-  if(!confirm("تصفير حالة الإرسال لهذا الملف؟")) return;
-  STATE = {}; saveState(); CUR = 0; PEEK = -1; render(); toast("تم التصفير");
+  if(!confirm(SHARED_ON ? "تصفير حالة الإرسال في هذا الجهاز فقط؟ (علامات زملائك تبقى كما هي)" : "تصفير حالة الإرسال لهذا الملف؟")) return;
+  STATE = {}; saveState(); if(SHARED_ON){ TIMES = {}; saveTimes(); } CUR = Math.max(0, ROWS.findIndex(r => !handled(r))); PEEK = -1; render(); toast("تم التصفير");
 });
 document.addEventListener("keydown", e => {
   if((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); $("#sendBtn")?.click(); }
